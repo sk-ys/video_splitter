@@ -24,6 +24,7 @@ translations = {
         "End": "End",
         "Length": "Length",
         "Delete": "Delete",
+        "Del.": "Del.",
         "Title": "Title",
         "No.": "No.",
         "Split List": "Split List",
@@ -72,6 +73,8 @@ translations = {
         "Cancel": "Cancel",
         "Apply": "Apply",
         "Clear": "Clear",
+        "Lv.": "Lv.",
+        "Full": "Full",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -97,6 +100,7 @@ translations = {
         "End": "終了",
         "Length": "長さ",
         "Delete": "削除",
+        "Del.": "削除",
         "Title": "タイトル",
         "No.": "No.",
         "Split List": "分割リスト",
@@ -145,5 +149,7 @@ translations = {
         "Cancel": "キャンセル",
         "Apply": "適用",
         "Clear": "クリア",
+        "Lv.": "Lv.",
+        "Full": "全て",
     },
 }
