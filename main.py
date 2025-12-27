@@ -607,7 +607,7 @@ class VideoSplitterApp(ctk.CTk):
                 max_width = 800
                 max_height = 450
                 scale = min(max_width / w, max_height / h)
-                new_w, new_h = int(w * scale), int(h * scale)
+                new_w, new_h = round(w * scale), round(h * scale)
 
                 frame = cv2.resize(frame, (new_w, new_h))
 
@@ -660,7 +660,7 @@ class VideoSplitterApp(ctk.CTk):
             self.update_frame()
             self.seek_slider.set(self.current_frame)
             self.update_time_label()
-            self.after(int(1000 / self.fps))
+            self.after(round(1000 / self.fps))
 
         if self.current_frame >= self.total_frames - 1:
             self.is_playing = False
@@ -687,7 +687,7 @@ class VideoSplitterApp(ctk.CTk):
             float(value) - self.seek_slider.cget("from_")
         ) / slider_range
 
-        self.current_frame = int(
+        self.current_frame = round(
             start_frame + relative_pos * (end_frame - start_frame)
         )
         self.current_frame = max(
@@ -699,7 +699,7 @@ class VideoSplitterApp(ctk.CTk):
 
     def update_zoom_range_slider(self, value):
         self.zoom_range = float(value)
-        self.zoom_range_label.configure(text=f"{int(self.zoom_range)}%")
+        self.zoom_range_label.configure(text=f"{round(self.zoom_range)}%")
         self.zoom_center = self.current_frame
         self.update_zoom_range()
         self.update_seekbar_range_display()
@@ -1050,7 +1050,7 @@ class VideoSplitterApp(ctk.CTk):
                 row_frame,
                 text=str(id),
                 width=30,
-                command=lambda _id=id: self.jump_to_split_start(_id),
+                command=lambda _id=id: self.jump_to_split(_id),
                 fg_color="gray30",
                 hover_color="gray40",
             )
@@ -1143,7 +1143,7 @@ class VideoSplitterApp(ctk.CTk):
             self.split_list[index]["title"] = safe_title
             self.update_split_list_display()
 
-    def jump_to_split_start(self, id):
+    def jump_to_split(self, id):
         """Jump to the start position of the specified split"""
         index = self.get_index_by_id(id)
         if index is None:
@@ -1158,7 +1158,15 @@ class VideoSplitterApp(ctk.CTk):
 
         if index < len(self.split_list):
             start_time = self.split_list[index]["start"]
-            self.current_frame = int(start_time * self.fps)
+            start_frame = round(start_time * self.fps)
+            if self.current_frame != start_frame:
+                target_frame = start_frame
+            else:
+                # If already at start, jump to end
+                end_time = self.split_list[index]["end"]
+                target_frame = round(end_time * self.fps)
+
+            self.current_frame = target_frame
             self.current_frame = max(
                 0, min(self.current_frame, self.total_frames - 1)
             )
