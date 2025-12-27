@@ -320,6 +320,17 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.list_label.grid(row=0, column=0, padx=10, pady=10)
 
+        # Clear button
+        self.clear_button = ctk.CTkButton(
+            self.right_frame,
+            text=t("Clear"),
+            command=self.clear_list,
+            fg_color="gray",
+            hover_color="darkgray",
+            width=80,
+        )
+        self.clear_button.grid(row=0, column=0, padx=10, pady=5, sticky="e")
+
         # Split list display (scrollable)
         self.list_frame = ctk.CTkScrollableFrame(self.right_frame)
         self.list_frame.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
@@ -355,19 +366,9 @@ class VideoSplitterApp(ctk.CTk):
 
         self.list_container.grid_columnconfigure(0, weight=1)
 
-        # Clear button
-        self.clear_button = ctk.CTkButton(
-            self.right_frame,
-            text=t("Clear list"),
-            command=self.clear_list,
-            fg_color="gray",
-            hover_color="darkgray",
-        )
-        self.clear_button.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
-
         # Output folder selection
         self.output_frame = ctk.CTkFrame(self.right_frame)
-        self.output_frame.grid(row=3, column=0, padx=10, pady=5, sticky="ew")
+        self.output_frame.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
 
         ctk.CTkLabel(self.output_frame, text=t("Output") + ":").grid(
             row=0, column=0, padx=5, pady=5
@@ -393,7 +394,7 @@ class VideoSplitterApp(ctk.CTk):
             state="disabled",
         )
         self.execute_button.grid(
-            row=4, column=0, padx=10, pady=20, sticky="ew"
+            row=3, column=0, padx=10, pady=20, sticky="ew"
         )
 
         # Progress bar

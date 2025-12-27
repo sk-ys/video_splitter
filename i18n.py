@@ -71,6 +71,7 @@ translations = {
         "OK": "OK",
         "Cancel": "Cancel",
         "Apply": "Apply",
+        "Clear": "Clear",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -143,5 +144,6 @@ translations = {
         "OK": "OK",
         "Cancel": "キャンセル",
         "Apply": "適用",
+        "Clear": "クリア",
     },
 }
