@@ -46,7 +46,7 @@ class VideoSplitterApp(ctk.CTk):
 
         # Split segment list
         self.split_list = []
-        self.start_point = None
+        self.start_frame = None
 
         # Margins for aligning seekbar and canvas (manual adjustment)
         self.canvas_margin_left = 12  # Left margin (pixels)
@@ -282,8 +282,16 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.end_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
+        self.length_label = ctk.CTkLabel(
+            self.mark_frame,
+            width=80,
+        )
+        self.length_label.grid(row=0, column=2, padx=10, pady=5, sticky="ew")
+        self.update_length_label(False)
+
         self.mark_frame.grid_columnconfigure(0, weight=1)
         self.mark_frame.grid_columnconfigure(1, weight=1)
+        self.mark_frame.grid_columnconfigure(2, weight=0)
 
         # Separator (resize bar)
         self.separator = ctk.CTkFrame(
@@ -513,6 +521,8 @@ class VideoSplitterApp(ctk.CTk):
         self.update_seekbar_range_display()
         self.draw_split_ranges()
 
+        self.update_length_label(False)
+
     def update_frame(self):
         if self.cap is not None:
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
@@ -692,17 +702,21 @@ class VideoSplitterApp(ctk.CTk):
 
         # Calculate zoom range
         visible_frames = self.total_frames * (self.zoom_range / 100)
-        start_frame = max(0, self.zoom_center - visible_frames / 2)
-        end_frame = min(self.total_frames - 1, start_frame + visible_frames)
+        visible_start_frame = max(0, self.zoom_center - visible_frames / 2)
+        visible_end_frame = min(
+            self.total_frames - 1, visible_start_frame + visible_frames
+        )
 
         # Boundary adjustment
-        if end_frame - start_frame < visible_frames:
-            if start_frame == 0:
-                end_frame = min(self.total_frames - 1, visible_frames)
+        if visible_end_frame - visible_start_frame < visible_frames:
+            if visible_start_frame == 0:
+                visible_end_frame = min(self.total_frames - 1, visible_frames)
             else:
-                start_frame = max(0, end_frame - visible_frames)
+                visible_start_frame = max(
+                    0, visible_end_frame - visible_frames
+                )
 
-        visible_range = end_frame - start_frame
+        visible_range = visible_end_frame - visible_start_frame
         if visible_range <= 0:
             visible_range = 1
 
@@ -711,20 +725,24 @@ class VideoSplitterApp(ctk.CTk):
             start_time = split["start"]
             end_time = split["end"]
 
-            start_f = start_time * self.fps
-            end_f = end_time * self.fps
+            start_frame = start_time * self.fps
+            end_frame = end_time * self.fps
 
             # Draw only if within zoom range
-            if end_f >= start_frame and start_f <= end_frame:
+            if (
+                end_frame >= visible_start_frame
+                and start_frame <= visible_end_frame
+            ):
                 # Calculate position on canvas (considering margins)
                 x1 = (
                     self.canvas_margin_left
-                    + ((start_f - start_frame) / visible_range)
+                    + ((start_frame - visible_start_frame) / visible_range)
                     * effective_width
                 )
                 x2 = (
                     self.canvas_margin_left
-                    + ((end_f - start_frame) / visible_range) * effective_width
+                    + ((end_frame - visible_start_frame) / visible_range)
+                    * effective_width
                 )
 
                 x1 = max(self.canvas_margin_left, x1)
@@ -743,12 +761,15 @@ class VideoSplitterApp(ctk.CTk):
                 )
 
         # If start point is set
-        if self.start_point is not None:
-            start_f = self.start_point * self.fps
-            if start_f >= start_frame and start_f <= end_frame:
+        if self.start_frame is not None:
+            start_frame = self.start_frame
+            if (
+                start_frame >= visible_start_frame
+                and start_frame <= visible_end_frame
+            ):
                 x = (
                     self.canvas_margin_left
-                    + ((start_f - start_frame) / visible_range)
+                    + ((start_frame - visible_start_frame) / visible_range)
                     * effective_width
                 )
                 self.seek_canvas.create_line(
@@ -757,12 +778,12 @@ class VideoSplitterApp(ctk.CTk):
 
         # Draw current position
         if (
-            self.current_frame >= start_frame
-            and self.current_frame <= end_frame
+            self.current_frame >= visible_start_frame
+            and self.current_frame <= visible_end_frame
         ):
             x = (
                 self.canvas_margin_left
-                + ((self.current_frame - start_frame) / visible_range)
+                + ((self.current_frame - visible_start_frame) / visible_range)
                 * effective_width
             )
             self.seek_canvas.create_line(
@@ -790,11 +811,30 @@ class VideoSplitterApp(ctk.CTk):
         # Update canvas
         self.draw_split_ranges()
 
+        # Update end button label if start point is set
+        self.update_length_label()
+
+    def update_length_label(self, enabled=True):
+        if self.start_frame is not None and enabled:
+            elapsed_frame = self.current_frame - self.start_frame
+            length_sec = elapsed_frame / self.fps
+        else:
+            length_sec = 0
+
+        sign = "-" if length_sec < 0 else " "
+        self.length_label.configure(
+            text=f"{t('Length')}: {sign}{self.format_time(abs(length_sec))}",
+            # state=("normal" if enabled else "disabled"),
+            text_color=(
+                ("white" if length_sec > 0 else "indian red") if enabled else "gray"
+            ),
+        )
+
     def set_start_point(self):
-        self.start_point = self.current_frame / self.fps
+        self.start_frame = self.current_frame
 
         # Update button display
-        start_time_str = self.format_time(self.start_point)
+        start_time_str = self.format_time(self.start_frame / self.fps)
         self.start_button.configure(
             text=f"{t("Start")}: {start_time_str} (F:{self.current_frame})",
             fg_color="green",
@@ -804,15 +844,16 @@ class VideoSplitterApp(ctk.CTk):
         self.draw_split_ranges()
 
     def set_end_point(self):
-        if self.start_point is None:
+        if self.start_frame is None:
             messagebox.showwarning(
                 t("Warning"), t("Start point must be set first")
             )
             return
 
+        start_point = self.start_frame / self.fps
         end_point = self.current_frame / self.fps
 
-        if end_point <= self.start_point:
+        if end_point <= start_point:
             messagebox.showwarning(
                 t("Warning"), t("End point must be after start point")
             )
@@ -820,9 +861,9 @@ class VideoSplitterApp(ctk.CTk):
 
         self.split_list.append(
             {
-                "start": self.start_point,
+                "start": start_point,
                 "end": end_point,
-                "duration": end_point - self.start_point,
+                "duration": end_point - start_point,
                 "title": f"part{len(self.split_list)+1:03d}",
             }
         )
@@ -836,13 +877,15 @@ class VideoSplitterApp(ctk.CTk):
             self.execute_button.configure(state="normal")
 
     def reset_start_point(self):
-        self.start_point = None
+        self.start_frame = None
         self.start_button.configure(
             text=t("Set Start Point"),
             fg_color=["#3B8ED0", "#1F6AA5"],  # Reset to default colors
             hover_color=["#36719F", "#144870"],
         )
         self.draw_split_ranges()
+
+        self.update_length_label(False)
 
     def update_split_list_display(self):
         # Clear existing list
@@ -937,11 +980,7 @@ class VideoSplitterApp(ctk.CTk):
         """Update title"""
         if index < len(self.split_list):
             # Remove characters not allowed in filenames
-            safe_title = "".join(
-                c
-                for c in title
-                if c.isalnum()
-            ).strip()
+            safe_title = "".join(c for c in title if c.isalnum()).strip()
             if not safe_title:
                 safe_title = f"part{index+1:03d}"
             self.split_list[index]["title"] = safe_title
@@ -1043,7 +1082,7 @@ class VideoSplitterApp(ctk.CTk):
                 t("Confirm"), t("Clear all split settings?")
             ):
                 self.split_list = []
-                self.start_point = None
+                self.start_frame = None
 
                 # Reset start point button
                 self.start_button.configure(
