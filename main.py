@@ -114,64 +114,27 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.status_bar.grid(row=0, column=0, padx=10, pady=2, sticky="ew")
 
+        self.setup_left_ui(self.main_frame)
+
+        self.setup_separator_ui(self.main_frame)
+
+        self.setup_right_ui(self.main_frame)
+
+    def setup_left_ui(self, parent):
         # Left: Video preview area
-        self.left_frame = ctk.CTkFrame(self.main_frame)
+        self.left_frame = ctk.CTkFrame(parent)
         self.left_frame.grid(
             row=0, column=0, padx=(10, 0), pady=(10, 0), sticky="nsew"
         )
         self.left_frame.grid_rowconfigure(1, weight=1)
         self.left_frame.grid_columnconfigure(0, weight=1)
 
-        # File selection area
-        self.file_select_frame = ctk.CTkFrame(self.left_frame)
-        self.file_select_frame.grid(
+        # Main menu area
+        self.main_menu_frame = ctk.CTkFrame(self.left_frame)
+        self.main_menu_frame.grid(
             row=0, column=0, padx=10, pady=10, sticky="ew"
         )
-
-        # Settings panel open button
-        self.open_settings_button = ctk.CTkButton(
-            self.file_select_frame,
-            text="⚙",
-            command=self.open_settings,
-            height=40,
-            width=40,
-            fg_color="gray40",
-            hover_color="gray50",
-        )
-        self.open_settings_button.grid(row=0, column=0, padx=5, pady=5)
-
-        # File select button
-        self.file_button = ctk.CTkButton(
-            self.file_select_frame,
-            text="🎦 " + t("Select video file"),
-            command=self.load_video_dialog,
-            height=40,
-        )
-        self.file_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
-
-        # Project load button
-        self.load_project_button = ctk.CTkButton(
-            self.file_select_frame,
-            text="📂 " + t("Load Project"),
-            command=self.load_project,
-            height=40,
-            width=150,
-            fg_color="gray40",
-            hover_color="gray50",
-        )
-        self.load_project_button.grid(row=0, column=2, padx=5, pady=5)
-
-        # Project save button
-        self.save_project_button = ctk.CTkButton(
-            self.file_select_frame,
-            text="💾 " + t("Save Project"),
-            command=self.save_project,
-            height=40,
-            width=150,
-            fg_color="gray40",
-            hover_color="gray50",
-        )
-        self.save_project_button.grid(row=0, column=3, padx=5, pady=5)
+        self.setup_main_menu_ui(self.main_menu_frame)
 
         # Video display canvas
         self.canvas_frame = ctk.CTkFrame(self.left_frame)
@@ -185,53 +148,18 @@ class VideoSplitterApp(ctk.CTk):
         # Control panel
         self.control_frame = ctk.CTkFrame(self.left_frame)
         self.control_frame.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
+        self.setup_video_control_ui(self.control_frame)
 
+    def setup_video_control_ui(self, parent):
         # Button group
-        self.button_group_frame = ctk.CTkFrame(self.control_frame)
-        self.button_group_frame.grid(
+        self.video_control_buttons_frame = ctk.CTkFrame(parent)
+        self.video_control_buttons_frame.grid(
             row=0, column=0, padx=5, pady=5, sticky="w"
         )
-
-        # Play/Pause button
-        self.play_button = ctk.CTkButton(
-            self.button_group_frame,
-            text="▶ " + t("Play"),
-            command=self.toggle_play,
-            width=100,
-            state="disabled",
-        )
-        self.play_button.grid(row=0, column=0, padx=5, pady=5)
-
-        # Frame navigation buttons
-        self.prev_frame_button = ctk.CTkButton(
-            self.button_group_frame,
-            text=f"◀ 1F",
-            command=self.prev_frame,
-            width=60,
-            state="disabled",
-        )
-        self.prev_frame_button.grid(row=0, column=1, padx=5, pady=5)
-
-        self.next_frame_button = ctk.CTkButton(
-            self.button_group_frame,
-            text=f"1F ▶",
-            command=self.next_frame,
-            width=60,
-            state="disabled",
-        )
-        self.next_frame_button.grid(row=0, column=2, padx=5, pady=5)
-
-        self.jump_to_time_button = ctk.CTkButton(
-            self.button_group_frame,
-            text="➡️",
-            command=self.jump_to_time_dialog,
-            width=30,
-            state="disabled",
-        )
-        self.jump_to_time_button.grid(row=0, column=3, padx=5, pady=5)
+        self.setup_video_control_buttons_ui(self.video_control_buttons_frame)
 
         # Time and frame display
-        self.info_frame = ctk.CTkFrame(self.control_frame)
+        self.info_frame = ctk.CTkFrame(parent)
         self.info_frame.grid(row=0, column=3, padx=10, pady=5)
 
         self.time_label = ctk.CTkLabel(
@@ -245,7 +173,7 @@ class VideoSplitterApp(ctk.CTk):
         self.frame_label.pack(side="left", padx=(0, 10))
 
         # Seekbar and zoom controls
-        self.seekbar_frame = ctk.CTkFrame(self.control_frame)
+        self.seekbar_frame = ctk.CTkFrame(parent)
         self.seekbar_frame.grid(
             row=1, column=0, columnspan=4, padx=5, pady=5, sticky="ew"
         )
@@ -283,46 +211,7 @@ class VideoSplitterApp(ctk.CTk):
             row=1, column=0, columnspan=3, padx=5, pady=5, sticky="ew"
         )
 
-        self.seek_canvases = []
-        for layer in self.layers:
-            pady = (
-                5 if layer == 1 else 0,
-                5 if layer == len(self.layers) else 1,
-            )
-            seek_layer_button = ctk.CTkButton(
-                self.seek_canvases_frame,
-                text=f"L{layer}",
-                command=lambda l=layer: self.change_layer(str(l)),
-                fg_color="gray40",
-                width=30,
-                height=30,
-            )
-            seek_layer_button.grid(row=layer - 1, column=0, padx=5, pady=pady)
-
-            seek_canvas = tk.Canvas(
-                self.seek_canvases_frame,
-                height=30,
-                bg="gray10",
-                highlightthickness=0,
-            )
-            seek_canvas.grid(
-                row=layer - 1,
-                column=1,
-                padx=(0, 10),
-                pady=pady,
-                sticky="ew",
-            )
-
-            self.seek_canvases.append(
-                {
-                    "layer": layer,
-                    "layer_button": seek_layer_button,
-                    "seek_canvas": seek_canvas,
-                }
-            )
-
-        self.seek_canvases_frame.grid_columnconfigure(0, weight=0)
-        self.seek_canvases_frame.grid_columnconfigure(1, weight=1)
+        self.setup_seekbar_canvases_ui(self.seek_canvases_frame)
 
         # Empty canvas for main seekbar
         empty_canvas_frame = ctk.CTkFrame(
@@ -360,6 +249,7 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.seekbar_end_label.pack(side="right")
 
+        # Expand seekbar frame columns
         self.control_frame.grid_columnconfigure(1, weight=1)
 
         # Zoom-related variables
@@ -367,11 +257,143 @@ class VideoSplitterApp(ctk.CTk):
         self.zoom_center = 0  # center frame for zoom
 
         # Split point setting buttons
-        self.mark_frame = ctk.CTkFrame(self.left_frame)
-        self.mark_frame.grid(row=3, column=0, padx=10, pady=5, sticky="ew")
+        self.split_control_frame = ctk.CTkFrame(self.left_frame)
+        self.split_control_frame.grid(
+            row=3, column=0, padx=10, pady=5, sticky="ew"
+        )
 
+        self.setup_split_control_ui(self.split_control_frame)
+
+    def setup_main_menu_ui(self, parent):
+        # Settings panel open button
+        self.open_settings_button = ctk.CTkButton(
+            parent,
+            text="⚙",
+            command=self.open_settings,
+            height=40,
+            width=40,
+            fg_color="gray40",
+            hover_color="gray50",
+        )
+        self.open_settings_button.grid(row=0, column=0, padx=5, pady=5)
+
+        # File select button
+        self.file_button = ctk.CTkButton(
+            parent,
+            text="🎦 " + t("Select video file"),
+            command=self.load_video_dialog,
+            height=40,
+        )
+        self.file_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        # Project load button
+        self.load_project_button = ctk.CTkButton(
+            parent,
+            text="📂 " + t("Load Project"),
+            command=self.load_project,
+            height=40,
+            width=150,
+            fg_color="gray40",
+            hover_color="gray50",
+        )
+        self.load_project_button.grid(row=0, column=2, padx=5, pady=5)
+
+        # Project save button
+        self.save_project_button = ctk.CTkButton(
+            parent,
+            text="💾 " + t("Save Project"),
+            command=self.save_project,
+            height=40,
+            width=150,
+            fg_color="gray40",
+            hover_color="gray50",
+        )
+        self.save_project_button.grid(row=0, column=3, padx=5, pady=5)
+
+    def setup_video_control_buttons_ui(self, parent):
+        # Play/Pause button
+        self.play_button = ctk.CTkButton(
+            parent,
+            text="▶ " + t("Play"),
+            command=self.toggle_play,
+            width=100,
+            state="disabled",
+        )
+        self.play_button.grid(row=0, column=0, padx=5, pady=5)
+
+        # Frame navigation buttons
+        self.prev_frame_button = ctk.CTkButton(
+            parent,
+            text=f"◀ 1F",
+            command=self.prev_frame,
+            width=60,
+            state="disabled",
+        )
+        self.prev_frame_button.grid(row=0, column=1, padx=5, pady=5)
+
+        self.next_frame_button = ctk.CTkButton(
+            parent,
+            text=f"1F ▶",
+            command=self.next_frame,
+            width=60,
+            state="disabled",
+        )
+        self.next_frame_button.grid(row=0, column=2, padx=5, pady=5)
+
+        self.jump_to_time_button = ctk.CTkButton(
+            parent,
+            text="➡️",
+            command=self.jump_to_time_dialog,
+            width=30,
+            state="disabled",
+        )
+        self.jump_to_time_button.grid(row=0, column=3, padx=5, pady=5)
+
+    def setup_seekbar_canvases_ui(self, parent):
+        self.seek_canvases = []
+        for layer in self.layers:
+            pady = (
+                5 if layer == 1 else 0,
+                5 if layer == len(self.layers) else 1,
+            )
+            seek_layer_button = ctk.CTkButton(
+                parent,
+                text=f"L{layer}",
+                command=lambda l=layer: self.change_layer(str(l)),
+                fg_color="gray40",
+                width=30,
+                height=30,
+            )
+            seek_layer_button.grid(row=layer - 1, column=0, padx=5, pady=pady)
+
+            seek_canvas = tk.Canvas(
+                parent,
+                height=30,
+                bg="gray10",
+                highlightthickness=0,
+            )
+            seek_canvas.grid(
+                row=layer - 1,
+                column=1,
+                padx=(0, 10),
+                pady=pady,
+                sticky="ew",
+            )
+
+            self.seek_canvases.append(
+                {
+                    "layer": layer,
+                    "layer_button": seek_layer_button,
+                    "seek_canvas": seek_canvas,
+                }
+            )
+
+        parent.grid_columnconfigure(0, weight=0)
+        parent.grid_columnconfigure(1, weight=1)
+
+    def setup_split_control_ui(self, parent):
         self.start_button = ctk.CTkButton(
-            self.mark_frame,
+            parent,
             text=t("Set Start Point"),
             command=self.set_start_point,
             state="disabled",
@@ -379,7 +401,7 @@ class VideoSplitterApp(ctk.CTk):
         self.start_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         self.end_button = ctk.CTkButton(
-            self.mark_frame,
+            parent,
             text=t("Set End Point (Add Split)"),
             command=self.set_end_point,
             state="disabled",
@@ -387,20 +409,21 @@ class VideoSplitterApp(ctk.CTk):
         self.end_button.grid(row=0, column=2, padx=5, pady=5, sticky="ew")
 
         self.length_label = ctk.CTkLabel(
-            self.mark_frame,
+            parent,
             width=80,
         )
         self.length_label.grid(row=0, column=3, padx=10, pady=5, sticky="ew")
         self.update_length_label(False)
 
-        self.mark_frame.grid_columnconfigure(0, weight=0)
-        self.mark_frame.grid_columnconfigure(1, weight=1)
-        self.mark_frame.grid_columnconfigure(2, weight=1)
-        self.mark_frame.grid_columnconfigure(3, weight=1)
+        parent.grid_columnconfigure(0, weight=0)
+        parent.grid_columnconfigure(1, weight=1)
+        parent.grid_columnconfigure(2, weight=1)
+        parent.grid_columnconfigure(3, weight=1)
 
+    def setup_separator_ui(self, parent):
         # Separator (resize bar)
         self.separator = ctk.CTkFrame(
-            self.main_frame,
+            parent,
             fg_color="#4a4a4a",
             width=5,
             cursor="sb_h_double_arrow",
@@ -412,8 +435,9 @@ class VideoSplitterApp(ctk.CTk):
         self.resize_start_x = 0
         self.left_width = 800  # Initial width
 
+    def setup_right_ui(self, frame):
         # Right: Segment list and execute button
-        self.right_frame = ctk.CTkFrame(self.main_frame)
+        self.right_frame = ctk.CTkFrame(frame)
         self.right_frame.grid(
             row=0, column=2, padx=(0, 10), pady=(10, 0), sticky="nsew"
         )
@@ -459,39 +483,7 @@ class VideoSplitterApp(ctk.CTk):
         self.list_frame = ctk.CTkScrollableFrame(self.right_frame)
         self.list_frame.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
         self.list_frame.grid_columnconfigure(0, weight=1)
-
-        # Header
-        self.header_frame = ctk.CTkFrame(self.list_frame)
-        self.header_frame.grid(row=0, column=0, sticky="ew", pady=5)
-        ctk.CTkLabel(self.header_frame, text=t("No."), width=30).grid(
-            row=0, column=0, padx=2
-        )
-        ctk.CTkLabel(self.header_frame, text=t("L"), width=30).grid(
-            row=0, column=1, padx=2
-        )
-        ctk.CTkLabel(self.header_frame, text=t("Title")).grid(
-            row=0, column=2, padx=2
-        )
-        ctk.CTkLabel(self.header_frame, text=t("Start"), width=80).grid(
-            row=0, column=3, padx=2
-        )
-        ctk.CTkLabel(self.header_frame, text=t("End"), width=80).grid(
-            row=0, column=4, padx=2
-        )
-        ctk.CTkLabel(self.header_frame, text=t("Length"), width=80).grid(
-            row=0, column=5, padx=2
-        )
-        ctk.CTkLabel(self.header_frame, text=t("Del."), width=30).grid(
-            row=0, column=6, padx=2
-        )
-
-        self.header_frame.grid_columnconfigure(2, weight=1)
-
-        # List container
-        self.list_container = ctk.CTkFrame(self.list_frame)
-        self.list_container.grid(row=1, column=0, sticky="ew")
-
-        self.list_container.grid_columnconfigure(0, weight=1)
+        self.setup_segment_list_ui(self.list_frame)
 
         # Output folder selection
         self.output_frame = ctk.CTkFrame(self.right_frame)
@@ -531,6 +523,40 @@ class VideoSplitterApp(ctk.CTk):
 
         self.progress_label = ctk.CTkLabel(self.right_frame, text="")
         self.progress_label.grid(row=6, column=0, padx=10, pady=5)
+
+    def setup_segment_list_ui(self, parent):
+        # Header
+        self.header_frame = ctk.CTkFrame(parent)
+        self.header_frame.grid(row=0, column=0, sticky="ew", pady=5)
+        ctk.CTkLabel(self.header_frame, text=t("No."), width=30).grid(
+            row=0, column=0, padx=2
+        )
+        ctk.CTkLabel(self.header_frame, text=t("L"), width=30).grid(
+            row=0, column=1, padx=2
+        )
+        ctk.CTkLabel(self.header_frame, text=t("Title")).grid(
+            row=0, column=2, padx=2
+        )
+        ctk.CTkLabel(self.header_frame, text=t("Start"), width=80).grid(
+            row=0, column=3, padx=2
+        )
+        ctk.CTkLabel(self.header_frame, text=t("End"), width=80).grid(
+            row=0, column=4, padx=2
+        )
+        ctk.CTkLabel(self.header_frame, text=t("Length"), width=80).grid(
+            row=0, column=5, padx=2
+        )
+        ctk.CTkLabel(self.header_frame, text=t("Del."), width=30).grid(
+            row=0, column=6, padx=2
+        )
+
+        self.header_frame.grid_columnconfigure(2, weight=1)
+
+        # List container
+        self.list_container = ctk.CTkFrame(parent)
+        self.list_container.grid(row=1, column=0, sticky="ew")
+
+        self.list_container.grid_columnconfigure(0, weight=1)
 
     def set_status_text(
         self,
