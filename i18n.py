@@ -27,7 +27,7 @@ translations = {
         "Del.": "Del.",
         "Title": "Title",
         "No.": "No.",
-        "Split List": "Split List",
+        "Segment List": "Segment List",
         "Output": "Output",
         "Play": "Play",
         "Pause": "Pause",
@@ -75,6 +75,7 @@ translations = {
         "Clear": "Clear",
         "Lv.": "Lv.",
         "Full": "Full",
+        "Segment ID not found": "Segment ID not found",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -103,7 +104,7 @@ translations = {
         "Del.": "削除",
         "Title": "タイトル",
         "No.": "No.",
-        "Split List": "分割リスト",
+        "Segment List": "セグメントリスト",
         "Output": "出力先",
         "Play": "再生",
         "Pause": "一時停止",
@@ -151,5 +152,6 @@ translations = {
         "Clear": "クリア",
         "Lv.": "Lv.",
         "Full": "全て",
+        "Segment ID not found": "セグメントIDが見つかりません",
     },
 }
