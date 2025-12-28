@@ -532,6 +532,39 @@ class VideoSplitterApp(ctk.CTk):
         self.progress_label = ctk.CTkLabel(self.right_frame, text="")
         self.progress_label.grid(row=6, column=0, padx=10, pady=5)
 
+    def set_status_text(
+        self,
+        text,
+        duration=5000,
+        text_color="gray40",
+        bg_color="transparent",
+    ):
+        self.status_bar.configure(
+            text=text, text_color=text_color, bg_color=bg_color
+        )
+        if duration > 0:
+            self.after(duration, self.clear_status_text)
+
+    def clear_status_text(self):
+        self.set_status_text("", duration=0)
+
+    def set_status_error(self, text, duration=5000):
+        self.set_status_text(
+            text="🛑 " + text, duration=duration, text_color="orange red"
+        )
+
+    def set_status_warning(self, text, duration=5000):
+        self.set_status_text(
+            text="⚠️ " + text,
+            duration=duration,
+            text_color="sandy brown",
+        )
+
+    def set_status_info(self, text, duration=5000):
+        self.set_status_text(
+            text="ℹ️ " + text, duration=duration, text_color="cornflower blue"
+        )
+
     def seekbar_resize_event(self, event):
         self.after(10, self.draw_all_segment_ranges)
 
@@ -1052,6 +1085,9 @@ class VideoSplitterApp(ctk.CTk):
         # Set current position to new start point
         if self.start_frame != self.current_frame:
             self.jump_to_frame(self.start_frame)
+            self.set_status_info(
+                t("Start point set at next available position automatically")
+            )
 
         # Update button display
         start_time_str = utils.format_time(self.start_frame / self.fps)
@@ -1117,6 +1153,14 @@ class VideoSplitterApp(ctk.CTk):
         # Set current position to new end point
         if end_frame != self.current_frame:
             self.jump_to_frame(end_frame)
+            self.set_status_info(
+                t(
+                    "End point set at previous available position automatically"
+                    + " and segment added."
+                )
+            )
+        else:
+            self.set_status_info(t("Segment added"))
 
         self.update_segment_list_display()
 

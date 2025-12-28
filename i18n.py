@@ -78,6 +78,9 @@ translations = {
         "Segment ID not found": "Segment ID not found",
         "No free space available to set start point": "No free space available to set start point",
         "No free space available to set end point": "No free space available to set end point",
+        "Start point set at next available position automatically": "Start point set at next available position automatically",
+        "End point set at previous available position automatically and segment added": "End point set at previous available position automatically and segment added",
+        "Segment added": "Segment added",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -157,5 +160,8 @@ translations = {
         "Segment ID not found": "セグメントIDが見つかりません",
         "No free space available to set start point": "開始ポイントを設定する空き領域がありません",
         "No free space available to set end point": "終了ポイントを設定する空き領域がありません",
+        "Start point set at next available position automatically": "開始ポイントを利用可能な位置に自動で設定しました",
+        "End point set at previous available position automatically and segment added": "終了ポイントを利用可能な位置に自動で設定し、セグメントを追加しました",
+        "Segment added": "セグメントを追加しました",
     },
 }
