@@ -1441,13 +1441,15 @@ class VideoSplitterApp(ctk.CTk):
             )
             return
 
-        count_items = 0
         if layers is None:
-            count_items = len(self.segment_list)
-        else:
-            count_items = len(
-                [row for row in self.segment_list if row["layer"] in layers]
-            )
+            if self.show_full_list.get():
+                layers = self.layers
+            else:
+                layers = [self.selected_layer]
+
+        count_items = len(
+            [row for row in self.segment_list if row["layer"] in layers]
+        )
 
         if count_items == 0:
             messagebox.showwarning(t("Warning"), t("No segment settings"))
