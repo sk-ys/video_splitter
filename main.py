@@ -53,10 +53,6 @@ class VideoSplitterApp(ctk.CTk):
         self.split_list = []
         self.start_frame = None
 
-        # Margins for aligning seekbar and canvas (manual adjustment)
-        self.canvas_margin_left = 0  # Left margin (pixels)
-        self.canvas_margin_right = 0  # Right margin (pixels)
-
         self.setup_ui()
 
         self.change_layer(self.selected_layer)
@@ -801,11 +797,6 @@ class VideoSplitterApp(ctk.CTk):
 
         canvas_height = seek_canvas.winfo_height()
 
-        # Effective width considering margins
-        effective_width = (
-            canvas_width - self.canvas_margin_left - self.canvas_margin_right
-        )
-
         # Calculate zoom range
         visible_frames = self.total_frames * (self.zoom_range / 100)
         visible_start_frame = max(0, self.zoom_center - visible_frames / 2)
@@ -845,18 +836,14 @@ class VideoSplitterApp(ctk.CTk):
             ):
                 # Calculate position on canvas (considering margins)
                 x1 = (
-                    self.canvas_margin_left
-                    + ((start_frame - visible_start_frame) / visible_range)
-                    * effective_width
-                )
+                    (start_frame - visible_start_frame) / visible_range
+                ) * canvas_width
                 x2 = (
-                    self.canvas_margin_left
-                    + ((end_frame - visible_start_frame) / visible_range)
-                    * effective_width
-                )
+                    (end_frame - visible_start_frame) / visible_range
+                ) * canvas_width
 
-                x1 = max(self.canvas_margin_left, x1)
-                x2 = min(canvas_width - self.canvas_margin_right, x2)
+                x1 = max(0, x1)
+                x2 = min(canvas_width, x2)
 
                 # Draw range (semi-transparent green)
                 seek_canvas.create_rectangle(
@@ -878,10 +865,8 @@ class VideoSplitterApp(ctk.CTk):
                 and start_frame <= visible_end_frame
             ):
                 x = (
-                    self.canvas_margin_left
-                    + ((start_frame - visible_start_frame) / visible_range)
-                    * effective_width
-                )
+                    (start_frame - visible_start_frame) / visible_range
+                ) * canvas_width
                 seek_canvas.create_line(
                     x, 0, x, canvas_height, fill="#ffff00", width=3
                 )
@@ -893,10 +878,8 @@ class VideoSplitterApp(ctk.CTk):
             and self.current_frame <= visible_end_frame
         ):
             x = (
-                self.canvas_margin_left
-                + ((self.current_frame - visible_start_frame) / visible_range)
-                * effective_width
-            )
+                (self.current_frame - visible_start_frame) / visible_range
+            ) * canvas_width
             seek_canvas.create_line(
                 x, 0, x, canvas_height, fill="#ff0000", width=2
             )
