@@ -17,10 +17,10 @@ def split_video(video_path, split_list, output_path, progress_callback=None):
         if progress_callback:
             progress_callback(i, len(split_list))
         title = split.get("title", f"part{i+1:03d}")
-        level = str(split.get("level", ""))
-        level = f"l{level}-" if level else ""
+        layer = str(split.get("layer", ""))
+        layer = f"l{layer}-" if layer else ""
         output_file = os.path.join(
-            output_path, f"{video_name}_{level}{title}.mp4"
+            output_path, f"{video_name}_{layer}{title}.mp4"
         )
         cap = cv2.VideoCapture(video_path)
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")

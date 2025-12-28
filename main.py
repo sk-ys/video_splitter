@@ -45,9 +45,9 @@ class VideoSplitterApp(ctk.CTk):
         self.is_playing = False
         self.duration = 0
 
-        # Split levels
-        self.levels = [1, 2, 3]
-        self.selected_level = self.levels[0]
+        # Split layers
+        self.layers = [1, 2, 3]
+        self.selected_layer = self.layers[0]
 
         # Split segment list
         self.split_list = []
@@ -59,7 +59,7 @@ class VideoSplitterApp(ctk.CTk):
 
         self.setup_ui()
 
-        self.change_level(self.selected_level)
+        self.change_layer(self.selected_layer)
 
     def setup_ui(self):
         # Main layout: two resizable columns (left/right)
@@ -230,20 +230,20 @@ class VideoSplitterApp(ctk.CTk):
         )
 
         self.seek_canvases = []
-        for level in self.levels:
+        for layer in self.layers:
             pady = (
-                5 if level == 1 else 0,
-                5 if level == len(self.levels) else 1,
+                5 if layer == 1 else 0,
+                5 if layer == len(self.layers) else 1,
             )
-            seek_level_button = ctk.CTkButton(
+            seek_layer_button = ctk.CTkButton(
                 self.seek_canvases_frame,
-                text=f"{level}",
-                command=lambda l=level: self.change_level(str(l)),
+                text=f"{layer}",
+                command=lambda l=layer: self.change_layer(str(l)),
                 fg_color="gray40",
                 width=15,
                 height=30,
             )
-            seek_level_button.grid(row=level - 1, column=0, padx=5, pady=pady)
+            seek_layer_button.grid(row=layer - 1, column=0, padx=5, pady=pady)
 
             seek_canvas = tk.Canvas(
                 self.seek_canvases_frame,
@@ -252,7 +252,7 @@ class VideoSplitterApp(ctk.CTk):
                 highlightthickness=0,
             )
             seek_canvas.grid(
-                row=level - 1,
+                row=layer - 1,
                 column=1,
                 padx=(0, 10),
                 pady=pady,
@@ -261,8 +261,8 @@ class VideoSplitterApp(ctk.CTk):
 
             self.seek_canvases.append(
                 {
-                    "level": level,
-                    "level_button": seek_level_button,
+                    "layer": layer,
+                    "layer_button": seek_layer_button,
                     "seek_canvas": seek_canvas,
                 }
             )
@@ -391,12 +391,12 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.clear_button.grid(row=0, column=0, padx=10, pady=5, sticky="e")
 
-        # Level label
-        self.level_label = ctk.CTkLabel(
+        # layer label
+        self.layer_label = ctk.CTkLabel(
             self.right_frame,
-            text=f"{t("Level")}: {self.selected_level}",
+            text=f"{t("layer")}: {self.selected_layer}",
         )
-        self.level_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        self.layer_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
         # Split list display (scrollable)
         self.list_frame = ctk.CTkScrollableFrame(self.right_frame)
@@ -409,7 +409,7 @@ class VideoSplitterApp(ctk.CTk):
         ctk.CTkLabel(self.header_frame, text=t("No."), width=30).grid(
             row=0, column=0, padx=2
         )
-        ctk.CTkLabel(self.header_frame, text=t("Lv."), width=30).grid(
+        ctk.CTkLabel(self.header_frame, text=t("L"), width=30).grid(
             row=0, column=1, padx=2
         )
         ctk.CTkLabel(self.header_frame, text=t("Title")).grid(
@@ -753,18 +753,18 @@ class VideoSplitterApp(ctk.CTk):
             )
             self.seek_slider.set(slider_value)
 
-    def change_level(self, level_str):
-        self.selected_level = int(level_str)
-        self.level_label.configure(text=f"{t('Level')}: {self.selected_level}")
+    def change_layer(self, layer_str):
+        self.selected_layer = int(layer_str)
+        self.layer_label.configure(text=f"{t('layer')}: {self.selected_layer}")
         self.update_split_list_display()
-        for level in self.levels:
+        for layer in self.layers:
             self.draw_split_ranges(
-                level=level, draw_current=level == self.selected_level
+                layer=layer, draw_current=layer == self.selected_layer
             )
-            self.seek_canvases[level - 1]["level_button"].configure(
+            self.seek_canvases[layer - 1]["layer_button"].configure(
                 fg_color=(
                     "#1F6AA5"
-                    if level == self.selected_level
+                    if layer == self.selected_layer
                     else "transparent"
                 )
             )
@@ -775,15 +775,15 @@ class VideoSplitterApp(ctk.CTk):
             canvas.delete("all")
 
     def draw_all_split_ranges(self):
-        for level in self.levels:
+        for layer in self.layers:
             self.draw_split_ranges(
-                level=level, draw_current=level == self.selected_level
+                layer=layer, draw_current=layer == self.selected_layer
             )
 
-    def draw_split_ranges(self, level=None, draw_current=True):
-        if level is None:
-            level = self.selected_level
-        seek_canvas = self.seek_canvases[level - 1]["seek_canvas"]
+    def draw_split_ranges(self, layer=None, draw_current=True):
+        if layer is None:
+            layer = self.selected_layer
+        seek_canvas = self.seek_canvases[layer - 1]["seek_canvas"]
 
         # Clear the canvas
         seek_canvas.delete("all")
@@ -824,7 +824,7 @@ class VideoSplitterApp(ctk.CTk):
 
         # Draw split ranges
         filtered_split_list = [
-            split for split in self.split_list if split["level"] == level
+            split for split in self.split_list if split["layer"] == layer
         ]
 
         for split in filtered_split_list:
@@ -916,8 +916,8 @@ class VideoSplitterApp(ctk.CTk):
         )
 
         # Update canvas
-        for level in self.levels:
-            self.draw_split_ranges(level, level == self.selected_level)
+        for layer in self.layers:
+            self.draw_split_ranges(layer, layer == self.selected_layer)
 
         # Update end button label if start point is set
         self.update_length_label()
@@ -972,7 +972,7 @@ class VideoSplitterApp(ctk.CTk):
         filtered_split_list = [
             row
             for row in self.split_list
-            if row["level"] == self.selected_level
+            if row["layer"] == self.selected_layer
         ]
         self.split_list.append(
             {
@@ -981,7 +981,7 @@ class VideoSplitterApp(ctk.CTk):
                 "end": end_point,
                 "duration": end_point - start_point,
                 "title": f"part{len(filtered_split_list)+1:03d}",
-                "level": self.selected_level,
+                "layer": self.selected_layer,
             }
         )
 
@@ -1029,21 +1029,21 @@ class VideoSplitterApp(ctk.CTk):
 
         # Redisplay the list
         if self.show_full_list.get():
-            levels = self.levels
-            self.level_label.configure(text_color="gray")
+            layers = self.layers
+            self.layer_label.configure(text_color="gray")
         else:
-            levels = [self.selected_level]
-            self.level_label.configure(text_color="white")
+            layers = [self.selected_layer]
+            self.layer_label.configure(text_color="white")
 
         split_list = sorted(
-            [row for row in self.split_list if row.get("level") in levels],
+            [row for row in self.split_list if row.get("layer") in layers],
             key=lambda x: x["id"],
         )
         for i, split in enumerate(split_list):
             row_frame = ctk.CTkFrame(self.list_container)
             row_frame.grid(row=i, column=0, sticky="ew", pady=2)
             id = split.get("id")
-            level = split.get("level")
+            layer = split.get("layer")
 
             # Number button (jump to start position on click)
             num_btn = ctk.CTkButton(
@@ -1056,8 +1056,8 @@ class VideoSplitterApp(ctk.CTk):
             )
             num_btn.grid(row=0, column=0, padx=2)
 
-            # Level label
-            ctk.CTkLabel(row_frame, text=str(level), width=30).grid(
+            # layer label
+            ctk.CTkLabel(row_frame, text=str(layer), width=30).grid(
                 row=0, column=1, padx=2
             )
 
@@ -1151,10 +1151,10 @@ class VideoSplitterApp(ctk.CTk):
             return
 
         row = self.split_list[index]
-        level = row.get("level")
+        layer = row.get("layer")
 
-        if level != self.selected_level:
-            self.change_level(str(level))
+        if layer != self.selected_layer:
+            self.change_layer(str(layer))
 
         if index < len(self.split_list):
             start_time = self.split_list[index]["start"]
@@ -1254,20 +1254,20 @@ class VideoSplitterApp(ctk.CTk):
         row = [r for r in self.split_list if r["id"] == id][0]
         self.split_list = [row for row in self.split_list if row["id"] != id]
         self.update_split_list_display()
-        level = row["level"]
-        self.draw_split_ranges(level, level == self.selected_level)
+        layer = row["layer"]
+        self.draw_split_ranges(layer, layer == self.selected_layer)
 
         if len(self.split_list) == 0:
             self.execute_button.configure(state="disabled")
 
     def clear_list(self):
         if self.show_full_list.get():
-            levels = self.levels
+            layers = self.layers
         else:
-            levels = [self.selected_level]
+            layers = [self.selected_layer]
 
         filtered_split_list = [
-            row for row in self.split_list if row["level"] in levels
+            row for row in self.split_list if row["layer"] in layers
         ]
 
         if len(filtered_split_list) > 0:
@@ -1277,7 +1277,7 @@ class VideoSplitterApp(ctk.CTk):
                 self.split_list = [
                     row
                     for row in self.split_list
-                    if row["level"] not in levels
+                    if row["layer"] not in layers
                 ]
                 self.start_frame = None
 
@@ -1297,7 +1297,7 @@ class VideoSplitterApp(ctk.CTk):
         if folder:
             self.output_path = folder
 
-    def execute_split(self, levels=None):
+    def execute_split(self, layers=None):
         if not self.output_path:
             messagebox.showwarning(
                 t("Warning"), t("Output folder not selected")
@@ -1305,11 +1305,11 @@ class VideoSplitterApp(ctk.CTk):
             return
 
         count_items = 0
-        if levels is None:
+        if layers is None:
             count_items = len(self.split_list)
         else:
             count_items = len(
-                [row for row in self.split_list if row["level"] in levels]
+                [row for row in self.split_list if row["layer"] in layers]
             )
 
         if count_items == 0:
@@ -1318,12 +1318,12 @@ class VideoSplitterApp(ctk.CTk):
 
         self.execute_button.configure(state="disabled")
         threading.Thread(
-            target=self.split_video_thread, args=(levels,), daemon=True
+            target=self.split_video_thread, args=(layers,), daemon=True
         ).start()
 
-    def split_video_thread(self, levels):
-        if levels is None:
-            levels = self.levels
+    def split_video_thread(self, layers):
+        if layers is None:
+            layers = self.layers
 
         try:
 
@@ -1334,7 +1334,7 @@ class VideoSplitterApp(ctk.CTk):
                 self.progress.set(i / total if total else 0)
 
             filtered_split_list = [
-                row for row in self.split_list if row["level"] in levels
+                row for row in self.split_list if row["layer"] in layers
             ]
 
             split_video(
