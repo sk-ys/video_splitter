@@ -58,7 +58,7 @@ class VideoSplitterApp(ctk.CTk):
         super().__init__()
 
         self.title(t("Video Splitter"))
-        self.geometry("1400x800")
+        self.geometry("1400x900")
 
         # Video-related variables
         self.video_path = None
@@ -85,15 +85,39 @@ class VideoSplitterApp(ctk.CTk):
         # Main layout: two resizable columns (left/right)
         self.min_left_width = 750
         self.min_right_width = 600
-        self.grid_columnconfigure(0, weight=1, minsize=self.min_left_width)
-        self.grid_columnconfigure(1, weight=0)  # Separator
-        self.grid_columnconfigure(2, weight=0, minsize=self.min_right_width)
         self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(
+            0, weight=1, minsize=self.min_left_width + self.min_right_width
+        )
+
+        self.main_frame = ctk.CTkFrame(self)
+        self.main_frame.grid(row=0, column=0, sticky="nsew")
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(
+            0, weight=1, minsize=self.min_left_width
+        )
+        self.main_frame.grid_columnconfigure(1, weight=0)  # Separator
+        self.main_frame.grid_columnconfigure(
+            2, weight=0, minsize=self.min_right_width
+        )
+
+        self.status_bar_frame = ctk.CTkFrame(self, height=20)
+        self.status_bar_frame.grid(
+            row=1, column=0, padx=0, pady=0, sticky="ew"
+        )
+        self.status_bar = ctk.CTkLabel(
+            self.status_bar_frame,
+            text="",
+            height=20,
+            font=ctk.CTkFont(size=12),
+            text_color="gray60",
+        )
+        self.status_bar.grid(row=0, column=0, padx=10, pady=2, sticky="ew")
 
         # Left: Video preview area
-        self.left_frame = ctk.CTkFrame(self)
+        self.left_frame = ctk.CTkFrame(self.main_frame)
         self.left_frame.grid(
-            row=0, column=0, padx=(10, 0), pady=10, sticky="nsew"
+            row=0, column=0, padx=(10, 0), pady=(10, 0), sticky="nsew"
         )
         self.left_frame.grid_rowconfigure(1, weight=1)
         self.left_frame.grid_columnconfigure(0, weight=1)
@@ -278,7 +302,7 @@ class VideoSplitterApp(ctk.CTk):
             seek_canvas = tk.Canvas(
                 self.seek_canvases_frame,
                 height=30,
-                bg="#2b2b2b",
+                bg="gray10",
                 highlightthickness=0,
             )
             seek_canvas.grid(
@@ -320,7 +344,7 @@ class VideoSplitterApp(ctk.CTk):
 
         # Seekbar range display
         self.seekbar_range_frame = ctk.CTkFrame(
-            self.seekbar_frame, fg_color="#2b2b2b"
+            self.seekbar_frame, fg_color="transparent"
         )
         self.seekbar_range_frame.grid(
             row=3, column=1, columnspan=2, padx=5, pady=(5, 0), sticky="ew"
@@ -376,7 +400,10 @@ class VideoSplitterApp(ctk.CTk):
 
         # Separator (resize bar)
         self.separator = ctk.CTkFrame(
-            self, fg_color="#4a4a4a", width=5, cursor="sb_h_double_arrow"
+            self.main_frame,
+            fg_color="#4a4a4a",
+            width=5,
+            cursor="sb_h_double_arrow",
         )
         self.separator.grid(row=0, column=1, sticky="ns", padx=0, pady=10)
         self.separator.bind("<Button-1>", self.start_resize)
@@ -386,9 +413,9 @@ class VideoSplitterApp(ctk.CTk):
         self.left_width = 800  # Initial width
 
         # Right: Segment list and execute button
-        self.right_frame = ctk.CTkFrame(self)
+        self.right_frame = ctk.CTkFrame(self.main_frame)
         self.right_frame.grid(
-            row=0, column=2, padx=(0, 10), pady=10, sticky="nsew"
+            row=0, column=2, padx=(0, 10), pady=(10, 0), sticky="nsew"
         )
         self.right_frame.grid_rowconfigure(1, weight=1)
         self.right_frame.grid_columnconfigure(0, weight=1)
@@ -1515,14 +1542,15 @@ class VideoSplitterApp(ctk.CTk):
             and new_right_width >= self.min_right_width
         ):
             # Reset weight to the left side temporary
-            self.grid_columnconfigure(0, weight=0)
+            self.main_frame.grid_columnconfigure(0, weight=0)
 
             # Set new sizes
-            self.grid_columnconfigure(0, minsize=new_left_width)
-            self.grid_columnconfigure(2, minsize=new_right_width)
-
+            self.main_frame.grid_columnconfigure(0, minsize=new_left_width)
+            self.main_frame.grid_columnconfigure(2, minsize=new_right_width)
             # Restore weight to the left side after resizing
-            self.after(10, lambda: self.grid_columnconfigure(0, weight=1))
+            self.after(
+                10, lambda: self.main_frame.grid_columnconfigure(0, weight=1)
+            )
 
             self.update_idletasks()
 
