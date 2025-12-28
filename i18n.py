@@ -76,6 +76,8 @@ translations = {
         "Lv.": "Lv.",
         "Full": "Full",
         "Segment ID not found": "Segment ID not found",
+        "No free space available to set start point": "No free space available to set start point",
+        "No free space available to set end point": "No free space available to set end point",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -153,5 +155,7 @@ translations = {
         "Lv.": "Lv.",
         "Full": "全て",
         "Segment ID not found": "セグメントIDが見つかりません",
+        "No free space available to set start point": "開始ポイントを設定する空き領域がありません",
+        "No free space available to set end point": "終了ポイントを設定する空き領域がありません",
     },
 }

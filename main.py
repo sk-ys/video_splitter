@@ -988,13 +988,48 @@ class VideoSplitterApp(ctk.CTk):
             ),
         )
 
+    def get_next_free_time(self, start_time, layer=None):
+        """Get the next free time after start_time in the selected layer"""
+        segment = self.get_segment_by_time(start_time, layer, True, False)
+
+        if segment is None:
+            if start_time >= self.total_frames / self.fps:
+                return None
+            return start_time
+        else:
+            return self.get_next_free_time(segment["end"], layer)
+
+    def get_previous_free_time(self, end_time, layer=None):
+        """Get the previous free time before end_time in the selected layer"""
+        segment = self.get_segment_by_time(end_time, layer, False, True)
+
+        if segment is None:
+            if end_time <= 0:
+                return None
+            return end_time
+        else:
+            return self.get_previous_free_time(segment["start"], layer)
+
     def set_start_point(self):
-        self.start_frame = self.current_frame
+        """Set the start point at the next free time from current position"""
+        free_time = self.get_next_free_time(self.current_frame / self.fps)
+
+        if free_time is None:
+            messagebox.showwarning(
+                t("Warning"), t("No free space available to set start point")
+            )
+            return
+
+        self.start_frame = round(free_time * self.fps)
+
+        # Set current position to new start point
+        if self.start_frame != self.current_frame:
+            self.jump_to_frame(self.start_frame)
 
         # Update button display
         start_time_str = utils.format_time(self.start_frame / self.fps)
         self.start_button.configure(
-            text=f"{t("Start")}: {start_time_str} (F:{self.current_frame})",
+            text=f"{t("Start")}: {start_time_str} (F:{self.start_frame})",
             fg_color="green",
             hover_color="darkgreen",
         )
@@ -1002,16 +1037,35 @@ class VideoSplitterApp(ctk.CTk):
         self.draw_segment_ranges()
 
     def set_end_point(self):
+        """Set the end point at the previous free time from current position"""
         if self.start_frame is None:
             messagebox.showwarning(
                 t("Warning"), t("Start point must be set first")
             )
             return
 
-        start_point = self.start_frame / self.fps
-        end_point = self.current_frame / self.fps
+        if self.current_frame <= self.start_frame:
+            messagebox.showwarning(
+                t("Warning"),
+                t("End point must be after start point"),
+            )
+            return
 
-        if end_point <= start_point:
+        free_time = self.get_previous_free_time(self.current_frame / self.fps)
+
+        if free_time is None:
+            messagebox.showwarning(
+                t("Warning"), t("No free space available to set end point")
+            )
+            return
+
+        start_time = self.start_frame / self.fps
+        end_time = free_time
+        end_frame = round(end_time * self.fps)
+
+        if end_time <= start_time:
+            # Note: This should not happen due to previous checks, but just in
+            # case
             messagebox.showwarning(
                 t("Warning"), t("End point must be after start point")
             )
@@ -1025,13 +1079,17 @@ class VideoSplitterApp(ctk.CTk):
         self.segment_list.append(
             {
                 "id": self.get_max_list_index() + 1,
-                "start": start_point,
-                "end": end_point,
-                "duration": end_point - start_point,
+                "start": start_time,
+                "end": end_time,
+                "duration": end_time - start_time,
                 "title": f"part{len(filtered_segment_list)+1:03d}",
                 "layer": self.selected_layer,
             }
         )
+
+        # Set current position to new end point
+        if end_frame != self.current_frame:
+            self.jump_to_frame(end_frame)
 
         self.update_segment_list_display()
 
@@ -1064,6 +1122,37 @@ class VideoSplitterApp(ctk.CTk):
         for i, segment in enumerate(self.segment_list):
             if segment["id"] == id:
                 return segment
+        return None
+
+    def get_segment_by_time(
+        self, time_sec, layer=None, include_start=True, include_end=True
+    ):
+        """Get the segment dict by time (in seconds)"""
+        if layer is None:
+            layer = self.selected_layer
+
+        filtered_segment_list = [
+            segment
+            for segment in self.segment_list
+            if segment["layer"] == layer
+        ]
+
+        for segment in filtered_segment_list:
+            start = segment["start"]
+            end = segment["end"]
+
+            if include_start and include_end:
+                if start <= time_sec <= end:
+                    return segment
+            elif include_start:
+                if start <= time_sec < end:
+                    return segment
+            elif include_end:
+                if start < time_sec <= end:
+                    return segment
+            else:
+                if start < time_sec < end:
+                    return segment
         return None
 
     def reset_start_point(self):
