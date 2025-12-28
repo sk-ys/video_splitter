@@ -29,6 +29,29 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
+class CustomCTkInputDialog(ctk.CTkInputDialog):
+    """CTkInputDialog with robust initialvalue support across versions."""
+
+    def __init__(self, *args, initialvalue="", **kwargs):
+        self._initialvalue = initialvalue
+        super().__init__(*args, **kwargs)
+        # Apply after widgets are built to avoid being overwritten.
+        self.after(10, self._apply_initialvalue)
+
+    def _apply_initialvalue(self):
+        """Set the initial value in the input field."""
+        entry_widget = getattr(self, "entry", None) or getattr(
+            self, "_entry", None
+        )
+        if entry_widget is not None:
+            entry_widget.delete(0, tk.END)
+            entry_widget.insert(0, self._initialvalue)
+        else:
+            input_var = getattr(self, "input_var", None)
+            if input_var is not None:
+                input_var.set(self._initialvalue)
+
+
 class VideoSplitterApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -172,6 +195,15 @@ class VideoSplitterApp(ctk.CTk):
             state="disabled",
         )
         self.next_frame_button.grid(row=0, column=2, padx=5, pady=5)
+
+        self.jump_to_time_button = ctk.CTkButton(
+            self.button_group_frame,
+            text="➡️",
+            command=self.jump_to_time_dialog,
+            width=30,
+            state="disabled",
+        )
+        self.jump_to_time_button.grid(row=0, column=3, padx=5, pady=5)
 
         # Time and frame display
         self.info_frame = ctk.CTkFrame(self.control_frame)
@@ -581,6 +613,7 @@ class VideoSplitterApp(ctk.CTk):
         self.play_button.configure(state="normal")
         self.prev_frame_button.configure(state="normal")
         self.next_frame_button.configure(state="normal")
+        self.jump_to_time_button.configure(state="normal")
         self.start_button.configure(state="normal")
         self.end_button.configure(state="normal")
 
@@ -665,6 +698,34 @@ class VideoSplitterApp(ctk.CTk):
         if self.current_frame >= self.total_frames - 1:
             self.is_playing = False
             self.play_button.configure(text="▶ " + t("Play"))
+
+    def jump_to_frame(self, frame_num):
+        self.current_frame = max(0, min(frame_num, self.total_frames - 1))
+        self.update_zoom_range()
+        self.update_frame()
+        self.update_time_label()
+        self.update_seekbar_range_display()
+
+    def jump_to_time(self, time_sec):
+        frame_num = round(time_sec * self.fps)
+        self.jump_to_frame(frame_num)
+
+    def jump_to_time_dialog(self):
+        dialog = CustomCTkInputDialog(
+            title=t("Jump to Time"),
+            text=t("Enter time (in seconds or mm:ss.sss format):"),
+            initialvalue=f"{self.format_time(self.current_frame / self.fps)}",
+        )
+
+        time_str = dialog.get_input()
+
+        if time_str:
+            try:
+                self.jump_to_time(self.parse_time(time_str))
+            except ValueError:
+                messagebox.showerror(
+                    t("Error"), t("Invalid time format entered.")
+                )
 
     def seek_video(self, value):
         # Calculate zoom range
@@ -889,11 +950,8 @@ class VideoSplitterApp(ctk.CTk):
         total_time = self.duration
 
         # Display up to milliseconds
-        current_ms = int((current_time % 1) * 1000)
-        total_ms = int((total_time % 1) * 1000)
-
-        current_str = f"{int(current_time // 60):02d}:{int(current_time % 60):02d}.{current_ms:03d}"
-        total_str = f"{int(total_time // 60):02d}:{int(total_time % 60):02d}.{total_ms:03d}"
+        current_str = self.format_time(current_time)
+        total_str = self.format_time(total_time)
 
         self.time_label.configure(text=f"{current_str} / {total_str}")
 
@@ -1178,26 +1236,8 @@ class VideoSplitterApp(ctk.CTk):
 
         split_list = self.split_list
         try:
-            # Parse time string (format: mm:ss.mmm or mm:ss)
-            parts = time_str.strip().split(":")
-            if len(parts) != 2:
-                raise ValueError("Invalid format")
-
-            minutes = int(parts[0])
-
-            # Separate seconds and milliseconds
-            if "." in parts[1]:
-                sec_parts = parts[1].split(".")
-                seconds = int(sec_parts[0])
-                milliseconds = int(
-                    sec_parts[1].ljust(3, "0")[:3]
-                )  # Normalize to 3 digits
-            else:
-                seconds = int(parts[1])
-                milliseconds = 0
-
             # Convert to seconds
-            total_seconds = minutes * 60 + seconds + milliseconds / 1000.0
+            total_seconds = self.parse_time(time_str)
 
             # Validate value
             if total_seconds < 0 or total_seconds > self.duration:
@@ -1345,6 +1385,18 @@ class VideoSplitterApp(ctk.CTk):
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
         return f"{minutes:02d}:{secs:02d}.{ms:03d}"
+
+    def parse_time(self, time_str):
+        """Parse time string in mm:ss.mmm format to seconds"""
+        if ":" in time_str:
+            parts = time_str.split(":")
+            minutes = int(parts[0])
+            seconds = float(parts[1])
+            total_seconds = minutes * 60 + seconds
+        else:
+            total_seconds = float(time_str)
+
+        return total_seconds
 
     def start_resize(self, event):
         """Start resizing"""
