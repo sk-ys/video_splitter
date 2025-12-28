@@ -197,6 +197,7 @@ class VideoSplitterApp(ctk.CTk):
             row=1, column=0, columnspan=4, padx=5, pady=5, sticky="ew"
         )
         self.seekbar_frame.grid_columnconfigure(1, weight=1)
+        self.seekbar_frame.bind("<Configure>", self.seekbar_resize_event)
 
         # Zoom control
         self.zoom_range_control_frame = ctk.CTkFrame(self.seekbar_frame)
@@ -474,6 +475,9 @@ class VideoSplitterApp(ctk.CTk):
 
         self.progress_label = ctk.CTkLabel(self.right_frame, text="")
         self.progress_label.grid(row=6, column=0, padx=10, pady=5)
+
+    def seekbar_resize_event(self, event):
+        self.after(10, self.draw_all_split_ranges)
 
     class SettingsDialog(ctk.CTkToplevel):
         def __init__(self, parent):
