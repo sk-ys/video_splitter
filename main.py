@@ -267,10 +267,10 @@ class VideoSplitterApp(ctk.CTk):
             )
             seek_layer_button = ctk.CTkButton(
                 self.seek_canvases_frame,
-                text=f"{layer}",
+                text=f"L{layer}",
                 command=lambda l=layer: self.change_layer(str(l)),
                 fg_color="gray40",
-                width=15,
+                width=30,
                 height=30,
             )
             seek_layer_button.grid(row=layer - 1, column=0, padx=5, pady=pady)
@@ -302,7 +302,7 @@ class VideoSplitterApp(ctk.CTk):
 
         # Empty canvas for main seekbar
         empty_canvas_frame = ctk.CTkFrame(
-            self.seekbar_frame, width=22, height=10, fg_color="transparent"
+            self.seekbar_frame, width=32, height=10, fg_color="transparent"
         )
         empty_canvas_frame.grid(row=2, column=0)
 
