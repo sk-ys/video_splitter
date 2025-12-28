@@ -8,6 +8,7 @@ import threading
 import os
 import json
 import configparser
+import utils
 
 config = configparser.ConfigParser()
 config["DEFAULT"] = {"language": "en"}
@@ -27,7 +28,6 @@ def change_language(lang):
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
-
 
 class CustomCTkInputDialog(ctk.CTkInputDialog):
     """CTkInputDialog with robust initialvalue support across versions."""
@@ -714,14 +714,14 @@ class VideoSplitterApp(ctk.CTk):
         dialog = CustomCTkInputDialog(
             title=t("Jump to Time"),
             text=t("Enter time (in seconds or mm:ss.sss format):"),
-            initialvalue=f"{self.format_time(self.current_frame / self.fps)}",
+            initialvalue=f"{utils.format_time(self.current_frame / self.fps)}",
         )
 
         time_str = dialog.get_input()
 
         if time_str:
             try:
-                self.jump_to_time(self.parse_time(time_str))
+                self.jump_to_time(utils.parse_time(time_str))
             except ValueError:
                 messagebox.showerror(
                     t("Error"), t("Invalid time format entered.")
@@ -785,8 +785,8 @@ class VideoSplitterApp(ctk.CTk):
         start_time = start_frame / self.fps
         end_time = end_frame / self.fps
 
-        self.seekbar_start_label.configure(text=self.format_time(start_time))
-        self.seekbar_end_label.configure(text=self.format_time(end_time))
+        self.seekbar_start_label.configure(text=utils.format_time(start_time))
+        self.seekbar_end_label.configure(text=utils.format_time(end_time))
 
     def update_zoom_range(self):
         # Adjust seek slider position based on zoom
@@ -950,8 +950,8 @@ class VideoSplitterApp(ctk.CTk):
         total_time = self.duration
 
         # Display up to milliseconds
-        current_str = self.format_time(current_time)
-        total_str = self.format_time(total_time)
+        current_str = utils.format_time(current_time)
+        total_str = utils.format_time(total_time)
 
         self.time_label.configure(text=f"{current_str} / {total_str}")
 
@@ -976,7 +976,7 @@ class VideoSplitterApp(ctk.CTk):
 
         sign = "-" if length_sec < 0 else " "
         self.length_label.configure(
-            text=f"{t('Length')}: {sign}{self.format_time(abs(length_sec))}",
+            text=f"{t('Length')}: {sign}{utils.format_time(abs(length_sec))}",
             # state=("normal" if enabled else "disabled"),
             text_color=(
                 ("white" if length_sec > 0 else "indian red")
@@ -989,7 +989,7 @@ class VideoSplitterApp(ctk.CTk):
         self.start_frame = self.current_frame
 
         # Update button display
-        start_time_str = self.format_time(self.start_frame / self.fps)
+        start_time_str = utils.format_time(self.start_frame / self.fps)
         self.start_button.configure(
             text=f"{t("Start")}: {start_time_str} (F:{self.current_frame})",
             fg_color="green",
@@ -1125,7 +1125,7 @@ class VideoSplitterApp(ctk.CTk):
 
             # Start time (editable)
             start_entry = ctk.CTkEntry(row_frame, width=80)
-            start_entry.insert(0, self.format_time(split["start"]))
+            start_entry.insert(0, utils.format_time(split["start"]))
             start_entry.grid(row=0, column=3, padx=2)
             start_entry.bind(
                 "<FocusOut>",
@@ -1142,7 +1142,7 @@ class VideoSplitterApp(ctk.CTk):
 
             # End time (editable)
             end_entry = ctk.CTkEntry(row_frame, width=80)
-            end_entry.insert(0, self.format_time(split["end"]))
+            end_entry.insert(0, utils.format_time(split["end"]))
             end_entry.grid(row=0, column=4, padx=2)
             end_entry.bind(
                 "<FocusOut>",
@@ -1159,7 +1159,7 @@ class VideoSplitterApp(ctk.CTk):
 
             # Duration (auto-calculated)
             ctk.CTkLabel(
-                row_frame, text=self.format_time(split["duration"]), width=80
+                row_frame, text=utils.format_time(split["duration"]), width=80
             ).grid(row=0, column=5, padx=2)
 
             # Delete button
@@ -1237,7 +1237,7 @@ class VideoSplitterApp(ctk.CTk):
         split_list = self.split_list
         try:
             # Convert to seconds
-            total_seconds = self.parse_time(time_str)
+            total_seconds = utils.parse_time(time_str)
 
             # Validate value
             if total_seconds < 0 or total_seconds > self.duration:
@@ -1379,24 +1379,6 @@ class VideoSplitterApp(ctk.CTk):
             )
         finally:
             self.execute_button.configure(state="normal")
-
-    def format_time(self, seconds):
-        ms = int((seconds % 1) * 1000)
-        minutes = int(seconds // 60)
-        secs = int(seconds % 60)
-        return f"{minutes:02d}:{secs:02d}.{ms:03d}"
-
-    def parse_time(self, time_str):
-        """Parse time string in mm:ss.mmm format to seconds"""
-        if ":" in time_str:
-            parts = time_str.split(":")
-            minutes = int(parts[0])
-            seconds = float(parts[1])
-            total_seconds = minutes * 60 + seconds
-        else:
-            total_seconds = float(time_str)
-
-        return total_seconds
 
     def start_resize(self, event):
         """Start resizing"""
