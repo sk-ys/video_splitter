@@ -1251,9 +1251,11 @@ class VideoSplitterApp(ctk.CTk):
             self.update_split_list_display()
 
     def delete_split(self, id):
+        row = [r for r in self.split_list if r["id"] == id][0]
         self.split_list = [row for row in self.split_list if row["id"] != id]
         self.update_split_list_display()
-        self.draw_split_ranges()
+        level = row["level"]
+        self.draw_split_ranges(level, level == self.selected_level)
 
         if len(self.split_list) == 0:
             self.execute_button.configure(state="disabled")
