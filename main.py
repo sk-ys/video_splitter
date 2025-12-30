@@ -412,6 +412,8 @@ class VideoSplitterApp(ctk.CTk):
             self.mode_selector_frame,
             text=t("Link boundaries"),
             command=self.toggle_link_boundaries,
+            text_color_disabled="gray40",
+            state="disabled",
         )
         self.link_boundaries_enabled.grid(
             row=0, column=2, padx=5, pady=5, sticky="w"
@@ -547,7 +549,7 @@ class VideoSplitterApp(ctk.CTk):
             command=self.update_segment_list_display,
         )
         self.show_full_list.grid(
-            row=0, column=0, padx=(70, 10), pady=5, sticky="w"
+            row=0, column=0, padx=(90, 10), pady=5, sticky="w"
         )
 
         # Title
