@@ -961,10 +961,11 @@ class VideoSplitterApp(ctk.CTk):
         self.change_layer(str(layer))
         self.unselect_segment_id()
 
-    def change_layer(self, layer_str):
+    def change_layer(self, layer_str, update_segment_list=True):
         self.selected_layer = int(layer_str)
         self.layer_label.configure(text=f"{t('layer')}: {self.selected_layer}")
-        self.update_segment_list_display()
+        if update_segment_list:
+            self.update_segment_list_display()
         for layer in self.layers:
             self.draw_segment_ranges(
                 layer=layer, draw_current=layer == self.selected_layer
@@ -977,7 +978,21 @@ class VideoSplitterApp(ctk.CTk):
                 )
             )
 
+    def select_segment_id_with_jump(self, id):
+        id_str = str(id)
+        position = "start" if self.id_selector.get() != id_str else None
+
+        self.select_segment_id(id_str)
+
+        if id_str != "+":
+            self.jump_to_segment(
+                int(id_str),
+                position=position,
+            )
+
     def select_segment_id(self, id_str):
+        self.reset_segment_list_id_color()
+
         if id_str == "+":
             segment = None
             self.enable_toggle_link_boundaries(False)
@@ -989,14 +1004,43 @@ class VideoSplitterApp(ctk.CTk):
                 return
             self.enable_toggle_link_boundaries(True)
 
+            if segment["layer"] != self.selected_layer:
+                self.change_layer(str(segment["layer"]), False)
+
+            self.set_segment_list_id_color(segment["id"])
+
         if id_str != self.id_selector.get():
             self.id_selector.configure(variable=ctk.StringVar(value=id_str))
 
         self.draw_all_segment_ranges()
 
-        if segment is not None:
-            if segment["layer"] != self.selected_layer:
-                self.change_layer(str(segment["layer"]))
+    def set_segment_list_id_color(self, segment_id):
+        for segment in self.segment_list:
+            if segment["id"] == segment_id and (
+                segment["layer"] == self.selected_layer
+                or self.show_full_list.get()
+            ):
+                ui = segment.get("ui")
+                if ui and ui["num_btn"].winfo_exists():
+                    ui["num_btn"].configure(
+                        fg_color="#1F6AA5", hover_color="#36719F"
+                    )
+                else:
+                    print("No UI found for segment:", segment)
+
+    def reset_segment_list_id_color(self):
+        for segment in self.segment_list:
+            ui = segment.get("ui")
+            if (
+                segment["layer"] == self.selected_layer
+                or self.show_full_list.get()
+            ):
+                if ui and ui["num_btn"].winfo_exists():
+                    ui["num_btn"].configure(
+                        fg_color="gray30", hover_color="gray50"
+                    )
+                else:
+                    print("No UI found for segment:", segment)
 
     def update_segment_id_list(self):
         ids = sorted(set(segment["id"] for segment in self.segment_list))
@@ -1547,14 +1591,15 @@ class VideoSplitterApp(ctk.CTk):
             row_frame.grid(row=i, column=0, sticky="ew", pady=2)
             id = segment.get("id")
             layer = segment.get("layer")
+            is_selected = str(id) == self.id_selector.get()
 
             # Number button (jump to start position on click)
             num_btn = ctk.CTkButton(
                 row_frame,
                 text=str(id),
                 width=30,
-                command=lambda _id=id: self.jump_to_segment(_id),
-                fg_color="gray30",
+                command=lambda _id=id: self.select_segment_id_with_jump(_id),
+                fg_color="#1F6AA5" if is_selected else "gray30",
                 hover_color="gray40",
             )
             num_btn.grid(row=0, column=0, padx=2)
@@ -1637,6 +1682,14 @@ class VideoSplitterApp(ctk.CTk):
 
             row_frame.grid_columnconfigure(2, weight=1)
 
+            segment["ui"] = {
+                "frame": row_frame,
+                "num_btn": num_btn,
+                "title_entry": title_entry,
+                "start_entry": start_entry,
+                "end_entry": end_entry,
+            }
+
     def update_segment_title(self, id, title):
         """Update title"""
         index = self.get_index_by_id(id)
@@ -1648,8 +1701,20 @@ class VideoSplitterApp(ctk.CTk):
             self.segment_list[index]["title"] = safe_title
             self.update_segment_list_display()
 
-    def jump_to_segment(self, id):
-        """Jump to the start position of the specified segment"""
+    def jump_to_segment(self, id: int, position: str | None = None):
+        """Jump to the start or end position of the specified segment.
+
+        Args:
+            id (int): Segment ID to jump to.
+            position (str | None): Specifies which position to jump to.
+                If "start" | "s", jumps to the start of the segment.
+                If "end" | "e", jumps to the end of the segment.
+                If "middle" | "m", jumps to the middle of the segment.
+                If None, jumps to the start by default unless already at the start, in which case it jumps to the end.
+
+        Returns:
+            None: This function does not return a value. It updates the current frame and display based on the segment's position.
+        """
         segment = self.get_segment_by_id(id)
         if segment is None:
             print("Segment not found")
@@ -1662,17 +1727,37 @@ class VideoSplitterApp(ctk.CTk):
 
         start_time = segment["start"]
         start_frame = round(start_time * self.fps)
-        if self.current_frame != start_frame:
+
+        if position is None or position not in (
+            "start",
+            "end",
+            "middle",
+            "s",
+            "e",
+            "m",
+        ):
+            position = "start" if self.current_frame != start_frame else "end"
+
+        if position in ("start", "s"):
+            # Jump to start
             target_frame = start_frame
             self.set_status_info(
                 t("Jumped to the start of the selected segment")
             )
-        else:
+        elif position in ("end", "e"):
+            # Jump to end
             # If already at start, jump to end
             end_time = segment["end"]
             target_frame = round(end_time * self.fps)
             self.set_status_info(
                 t("Jumped to the end of the selected segment")
+            )
+        else:
+            # Jump to middle
+            mid_time = (segment["start"] + segment["end"]) / 2
+            target_frame = round(mid_time * self.fps)
+            self.set_status_info(
+                t("Jumped to the middle of the selected segment")
             )
 
         self.current_frame = target_frame
