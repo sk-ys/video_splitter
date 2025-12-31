@@ -1977,6 +1977,10 @@ class VideoSplitterApp(ctk.CTk):
         self.segments.remove_segment_by_id(id)
         self.update_segment_list_display()
         layer = segment.layer
+
+        if self.selected_segment_id == id:
+            self.unselect_segment_id()
+
         self.draw_segment_ranges(layer, layer == self.selected_layer)
 
         if len(self.segments) == 0:
