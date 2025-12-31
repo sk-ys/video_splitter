@@ -369,9 +369,7 @@ class StatusText:
                 bg_color=self.default_bg_color,
             )
 
-    def text(
-        self, text, duration=5000, text_color=None, bg_color=None
-    ):
+    def text(self, text, duration=5000, text_color=None, bg_color=None):
         if text_color is None:
             text_color = self.default_text_color
         if bg_color is None:
@@ -413,8 +411,10 @@ class VideoSplitterApp(ctk.CTk):
         self.is_playing = False
 
         # Split layers
-        self.layers = [1, 2, 3]
-        self.selected_layer = self.layers[0]
+        self.seek_canvases = []
+        self.set_layer_count(
+            config.getint("DEFAULT", "layer_count", fallback=3)
+        )
 
         # Project
         self.vp = None
@@ -426,6 +426,15 @@ class VideoSplitterApp(ctk.CTk):
         self.setup_ui()
 
         self.change_layer(self.selected_layer)
+
+    def set_layer_count(self, count):
+        self.layers = list(range(1, count + 1))
+        self.selected_layer = self.layers[0]
+        if hasattr(self, "seek_canvases_frame"):
+            self.clear_seekbar_canvases_ui()
+            self.setup_seekbar_canvases_ui(self.seek_canvases_frame)
+            self.update_seekbar_range_display()
+            self.update_segment_list_display()
 
     def setup_ui(self):
         # Main layout: two resizable columns (left/right)
@@ -738,6 +747,12 @@ class VideoSplitterApp(ctk.CTk):
         parent.grid_columnconfigure(0, weight=0)
         parent.grid_columnconfigure(1, weight=1)
 
+    def clear_seekbar_canvases_ui(self):
+        for seek_canvas_info in self.seek_canvases:
+            seek_canvas_info["seek_canvas"].destroy()
+            seek_canvas_info["layer_button"].destroy()
+        self.seek_canvases = []
+
     def setup_split_control_ui(self, parent):
         self.mode_selector_frame = ctk.CTkFrame(parent, fg_color="transparent")
         self.mode_selector_frame.grid(
@@ -1011,6 +1026,8 @@ class VideoSplitterApp(ctk.CTk):
         def __init__(self, parent):
             super().__init__(parent)
 
+            self.parent = parent
+
             self.title(t("Settings"))
             self.geometry("400x300")
 
@@ -1039,6 +1056,25 @@ class VideoSplitterApp(ctk.CTk):
             )
             self.lang_option.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
+            self.layer_count_label = ctk.CTkLabel(
+                self.content_frame, text=t("Number of default Layers") + ":"
+            )
+            self.layer_count_label.grid(
+                row=1, column=0, padx=5, pady=5, sticky="w"
+            )
+
+            self.layer_count_var = ctk.IntVar(
+                value=config.getint("DEFAULT", "layer_count", fallback=3)
+            )
+            self.layer_count_spinbox = ctk.CTkOptionMenu(
+                self.content_frame,
+                values=[str(i) for i in range(1, 11)],
+                variable=self.layer_count_var,
+            )
+            self.layer_count_spinbox.grid(
+                row=1, column=1, padx=5, pady=5, sticky="w"
+            )
+
             # Buttons
             self.button_frame = ctk.CTkFrame(self)
             self.button_frame.grid(
@@ -1063,9 +1099,11 @@ class VideoSplitterApp(ctk.CTk):
 
         def on_ok(self):
             config["DEFAULT"]["language"] = self.lang_var.get()
+            config["DEFAULT"]["layer_count"] = str(self.layer_count_var.get())
             with open("config.ini", "w") as config_file:
                 config.write(config_file)
             self.destroy()
+            self.parent.set_layer_count(self.layer_count_var.get())
 
         def on_cancel(self):
             self.destroy()
@@ -1263,7 +1301,7 @@ class VideoSplitterApp(ctk.CTk):
 
     def update_seekbar_range_display(self):
         """Update seekbar display range"""
-        if self.vp.total_frames == 0:
+        if self.vp is None or self.vp.total_frames == 0:
             return
 
         visible_frames = self.vp.total_frames * (self.zoom_range / 100)

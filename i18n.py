@@ -116,6 +116,7 @@ translations = {
         "Confirm": "Confirm",
         "Clear all segments?": "Clear all segments?",
         "Clear all segments in the current layer?": "Clear all segments in the current layer?",
+        "Number of default Layers": "Number of default Layers",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -228,5 +229,6 @@ translations = {
         "Jumped to the middle of the selected segment": "選択したセグメントの中央位置にジャンプしました",
         "Clear all segments?": "すべてのセグメントをクリアしますか？",
         "Clear all segments in the current layer?": "現在のレイヤーのすべてのセグメントをクリアしますか？",
+        "Number of default Layers": "デフォルトのレイヤー数",
     },
 }
