@@ -1,3 +1,4 @@
+from datetime import datetime
 import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
@@ -345,6 +346,61 @@ class VideoProject:
         return utils.load_video_dialog()
 
 
+class StatusText:
+    def __init__(
+        self,
+        app,
+        status_bar_label,
+        default_text_color="gray40",
+        default_bg_color="transparent",
+    ):
+        self.app = app
+        self.status_bar_label = status_bar_label
+        self.default_text_color = default_text_color
+        self.default_bg_color = default_bg_color
+        self.last_timestamp = None
+
+    def clear_status_text(self, timestamp=None):
+        # Clear only if enough time has passed since last update
+        if self.last_timestamp is None or timestamp == self.last_timestamp:
+            self.status_bar_label.configure(
+                text="",
+                text_color=self.default_text_color,
+                bg_color=self.default_bg_color,
+            )
+
+    def text(
+        self, text, duration=5000, text_color=None, bg_color=None
+    ):
+        if text_color is None:
+            text_color = self.default_text_color
+        if bg_color is None:
+            bg_color = self.default_bg_color
+        self.status_bar_label.configure(
+            text=text, text_color=text_color, bg_color=bg_color
+        )
+        timestamp = datetime.now()
+        self.last_timestamp = timestamp
+
+        if duration > 0:
+            self.app.after(
+                duration,
+                lambda timestamp=timestamp: self.clear_status_text(timestamp),
+            )
+
+    def info(self, text, duration=5000):
+        self.text("ℹ️ " + text, duration=duration, text_color="cornflower blue")
+
+    def warning(self, text, duration=5000):
+        self.text("⚠️ " + text, duration=duration, text_color="sandy brown")
+
+    def error(self, text, duration=5000):
+        self.text("🛑 " + text, duration=duration, text_color="orange red")
+
+    def clear(self):
+        self.text("", duration=0)
+
+
 class VideoSplitterApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -366,6 +422,7 @@ class VideoSplitterApp(ctk.CTk):
         self.start_frame = None
         self.selected_segment_id = None
 
+        self.status_text = None
         self.setup_ui()
 
         self.change_layer(self.selected_layer)
@@ -402,6 +459,7 @@ class VideoSplitterApp(ctk.CTk):
             text_color="gray60",
         )
         self.status_bar.grid(row=0, column=0, padx=10, pady=2, sticky="ew")
+        self.status_text = StatusText(self, self.status_bar)
 
         self.setup_left_ui(self.main_frame)
 
@@ -765,13 +823,13 @@ class VideoSplitterApp(ctk.CTk):
                 mode_display_value = t("Add")
 
         if mode == "Edit":
-            self.set_status_info(t("Edit mode enabled"))
+            self.status_text.info(t("Edit mode enabled"))
 
             if select_segment:
                 self.select_segment_id(segment.segment_id)
         else:
             # Default to Add mode
-            self.set_status_info(t("Add mode enabled"))
+            self.status_text.info(t("Add mode enabled"))
             if select_segment:
                 self.unselect_segment_id()
 
@@ -784,7 +842,7 @@ class VideoSplitterApp(ctk.CTk):
 
     def toggle_link_boundaries(self):
         if self.link_boundaries_enabled.get():
-            self.set_status_info(
+            self.status_text.info(
                 t("Link mode enabled")
                 + ": "
                 + "("
@@ -795,7 +853,7 @@ class VideoSplitterApp(ctk.CTk):
                 + ")"
             )
         else:
-            self.set_status_info(
+            self.status_text.info(
                 t("Link mode disabled")
                 + ": "
                 + "("
@@ -945,39 +1003,6 @@ class VideoSplitterApp(ctk.CTk):
         self.list_container.grid(row=1, column=0, sticky="ew")
 
         self.list_container.grid_columnconfigure(0, weight=1)
-
-    def set_status_text(
-        self,
-        text,
-        duration=5000,
-        text_color="gray40",
-        bg_color="transparent",
-    ):
-        self.status_bar.configure(
-            text=text, text_color=text_color, bg_color=bg_color
-        )
-        if duration > 0:
-            self.after(duration, self.clear_status_text)
-
-    def clear_status_text(self):
-        self.set_status_text("", duration=0)
-
-    def set_status_error(self, text, duration=5000):
-        self.set_status_text(
-            text="🛑 " + text, duration=duration, text_color="orange red"
-        )
-
-    def set_status_warning(self, text, duration=5000):
-        self.set_status_text(
-            text="⚠️ " + text,
-            duration=duration,
-            text_color="sandy brown",
-        )
-
-    def set_status_info(self, text, duration=5000):
-        self.set_status_text(
-            text="ℹ️ " + text, duration=duration, text_color="cornflower blue"
-        )
 
     def seekbar_resize_event(self, event):
         self.after(10, self.draw_all_segment_ranges)
@@ -1329,7 +1354,7 @@ class VideoSplitterApp(ctk.CTk):
         else:
             segment = self.vp.segments.get_segment_by_id(id)
             if segment is None:
-                self.set_status_warning(t("No segments to display"))
+                self.status_text.warning(t("No segments to display"))
                 self.select_segment_id()
                 return
             self.enable_toggle_link_boundaries(True)
@@ -1561,7 +1586,7 @@ class VideoSplitterApp(ctk.CTk):
         # Set current position to new start point
         if self.start_frame != self.current_frame:
             self.jump_to_frame(self.start_frame)
-            self.set_status_info(
+            self.status_text.info(
                 t("Start point set at next available position automatically")
             )
 
@@ -1634,7 +1659,7 @@ class VideoSplitterApp(ctk.CTk):
             self.update_segment_time(
                 last_segment.segment_id, "end", str(new_start_time)
             )
-            self.set_status_info(
+            self.status_text.info(
                 t(
                     "Start point updated and previous segment's end point "
                     + "adjusted."
@@ -1691,14 +1716,14 @@ class VideoSplitterApp(ctk.CTk):
         )
         if end_frame != self.current_frame:
             self.jump_to_frame(end_frame)
-            self.set_status_info(
+            self.status_text.info(
                 t(
                     "End point set at previous available position automatically"
                     + " and segment added."
                 )
             )
         else:
-            self.set_status_info(t("Segment added"))
+            self.status_text.info(t("Segment added"))
 
         self.update_segment_list_display()
 
@@ -1767,7 +1792,7 @@ class VideoSplitterApp(ctk.CTk):
             self.update_segment_time(
                 next_segment.segment_id, "start", str(new_end_time)
             )
-            self.set_status_info(
+            self.status_text.info(
                 t(
                     "End point updated and next segment's start point "
                     + "adjusted."
@@ -1961,21 +1986,21 @@ class VideoSplitterApp(ctk.CTk):
         if position in ("start", "s"):
             # Jump to start
             target_frame = start_frame
-            self.set_status_info(
+            self.status_text.info(
                 t("Jumped to the start of the selected segment")
             )
         elif position in ("end", "e"):
             # Jump to end
             # If already at start, jump to end
             target_frame = segment.end_frame
-            self.set_status_info(
+            self.status_text.info(
                 t("Jumped to the end of the selected segment")
             )
         else:
             # Jump to middle
             mid_time = (segment.start_time + segment.end_time) / 2
             target_frame = round(mid_time * self.vp.fps)
-            self.set_status_info(
+            self.status_text.info(
                 t("Jumped to the middle of the selected segment")
             )
 
