@@ -1,3 +1,17 @@
+import configparser
+from tkinter import filedialog
+
+# --- i18n setup ---
+config = configparser.ConfigParser()
+config["DEFAULT"] = {"language": "en"}
+config.read("config.ini")
+
+import i18n
+
+lang = config["DEFAULT"].get("language", "en")
+t = lambda s: i18n.translations[lang].get(s, s)
+
+
 def format_time(seconds):
     """Format seconds to mm:ss.sss"""
     m = int(seconds // 60)
@@ -16,3 +30,25 @@ def time_str_to_sec(time_str):
         return minutes * 60 + seconds
     else:
         return float(time_str)
+
+
+def load_video_dialog():
+    return filedialog.askopenfilename(
+        title=t("Select video file"),
+        filetypes=[
+            (t("Select video file"), "*.mp4 *.avi *.mov *.mkv"),
+            (t("Select"), "*.*"),
+        ],
+    )
+
+
+def load_video(video_path):
+    import cv2
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise IOError("Cannot open video file")
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    return cap, total_frames, fps
