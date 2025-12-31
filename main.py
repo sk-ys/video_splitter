@@ -1383,7 +1383,7 @@ class VideoSplitterApp(ctk.CTk):
                     print("No UI found for segment:", segment)
 
     def reset_segment_list_id_color(self):
-        if self.vp.segments is None:
+        if self.vp is None:
             return
 
         for segment in self.vp.segments:
