@@ -5,7 +5,7 @@ def format_time(seconds):
     return f"{m:02d}:{s:06.3f}"
 
 
-def parse_time(time_str):
+def time_str_to_sec(time_str):
     """Parse time string in seconds or mm:ss.sss format to seconds"""
     if ":" in time_str:
         parts = time_str.split(":")

@@ -1057,7 +1057,7 @@ class VideoSplitterApp(ctk.CTk):
 
         if time_str:
             try:
-                self.jump_to_time(utils.parse_time(time_str))
+                self.jump_to_time(utils.time_str_to_sec(time_str))
             except ValueError:
                 messagebox.showerror(
                     t("Error"), t("Invalid time format entered.")
@@ -1934,7 +1934,7 @@ class VideoSplitterApp(ctk.CTk):
 
         try:
             # Convert to seconds
-            total_seconds = utils.parse_time(time_str)
+            total_seconds = utils.time_str_to_sec(time_str)
 
             # Validate value
             if total_seconds < 0 or total_seconds > self.duration:
