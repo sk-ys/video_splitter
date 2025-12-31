@@ -53,6 +53,151 @@ class CustomCTkInputDialog(ctk.CTkInputDialog):
                 input_var.set(self._initialvalue)
 
 
+class Segment:
+    def __init__(self, fps, segment_id, layer, title, start_frame, end_frame):
+        self.fps = fps
+        self.segment_id = segment_id
+        self.layer = layer
+        self.title = title
+        self.start_frame = start_frame
+        self.end_frame = end_frame
+
+    def to_dict(self):
+        return {
+            "id": self.segment_id,
+            "layer": self.layer,
+            "title": self.title,
+            "start": self.start_time,
+            "end": self.end_time,
+        }
+
+    @property
+    def duration(self):
+        return self.end_frame - self.start_frame
+
+    @property
+    def start_time(self):
+        return self.start_frame / self.fps
+
+    @start_time.setter
+    def start_time(self, value):
+        self.start_frame = round(value * self.fps)
+
+    @property
+    def end_time(self):
+        return self.end_frame / self.fps
+
+    @end_time.setter
+    def end_time(self, value):
+        self.end_frame = round(value * self.fps)
+
+    @property
+    def ui(self):
+        return self._ui
+
+    @ui.setter
+    def ui(self, value):
+        self._ui = value
+
+    @ui.deleter
+    def ui(self):
+        self._ui = {}
+
+
+class SegmentManager:
+    def __init__(self, items=None):
+        self.items = items if items is not None else []
+        self._ui = {}
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __len__(self):
+        return len(self.items)
+
+    @classmethod
+    def from_dicts(cls, fps, dicts):
+        segments = []
+        for d in dicts:
+            segment = Segment(
+                fps=fps,
+                segment_id=d.get("id", d.get("segment_id")),
+                layer=d.get("layer", 1),
+                title=d["title"],
+                start_frame=round(d.get("start", d.get("start_time")) * fps),
+                end_frame=round(d.get("end", d.get("end_time")) * fps),
+            )
+            segments.append(segment)
+        return cls(segments)
+
+    def set_items(self, segments):
+        self.items = segments
+
+    def add_segment(self, segment: Segment):
+        self.items.append(segment)
+
+    def get_segment_by_id(self, segment_id):
+        """Get the segment by its ID"""
+        for segment in self.items:
+            if segment.segment_id == segment_id:
+                return segment
+        return None
+
+    def get_segment_by_time(
+        self, time_sec, layer, include_start=True, include_end=True
+    ):
+        """Get the segment by time (in seconds)"""
+        for segment in self.items:
+            if segment.layer != layer:
+                continue
+
+            start = segment.start_time
+            end = segment.end_time
+
+            if include_start and include_end:
+                if start <= time_sec <= end:
+                    return segment
+            elif include_start:
+                if start <= time_sec < end:
+                    return segment
+            elif include_end:
+                if start < time_sec <= end:
+                    return segment
+            else:
+                if start < time_sec < end:
+                    return segment
+        return None
+
+    def get_index_by_id(self, segment_id):
+        """Get the index of the segment by its ID"""
+        layer = self.get_segment_by_id(segment_id).layer
+        filtered_segments = self.filter_by_layers([layer])
+        for i, segment in enumerate(filtered_segments):
+            if segment.segment_id == segment_id:
+                return i
+        return None
+
+    def filter_by_layers(self, layers):
+        return [s for s in self.items if s.layer in layers]
+
+    def clear(self, layers=None):
+        if layers is None:
+            self.items = []
+        else:
+            self.items = [
+                segment
+                for segment in self.items
+                if segment.layer not in layers
+            ]
+
+    def remove_segment_by_id(self, segment_id):
+        self.items = [
+            segment
+            for segment in self.items
+            if segment.segment_id != segment_id
+        ]
+
+
 class VideoSplitterApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -74,7 +219,7 @@ class VideoSplitterApp(ctk.CTk):
         self.selected_layer = self.layers[0]
 
         # Split segment list
-        self.segment_list = []
+        self.segments = SegmentManager()
         self.start_frame = None
 
         self.selected_segment_id = None
@@ -461,10 +606,13 @@ class VideoSplitterApp(ctk.CTk):
 
         if mode == "Edit":
             if self.selected_segment_id is not None:
-                segment = self.get_segment_by_id(self.selected_segment_id)
+                segment = self.segments.get_segment_by_id(
+                    self.selected_segment_id
+                )
             else:
-                segment = self.get_segment_by_time(
-                    self.current_frame / self.fps
+                segment = self.segments.get_segment_by_time(
+                    self.current_frame / self.fps,
+                    self.selected_layer,
                 )
 
             if segment is None:
@@ -478,7 +626,7 @@ class VideoSplitterApp(ctk.CTk):
             self.set_status_info(t("Edit mode enabled"))
 
             if select_segment:
-                self.select_segment_id(segment["id"])
+                self.select_segment_id(segment.segment_id)
         else:
             # Default to Add mode
             self.set_status_info(t("Add mode enabled"))
@@ -1044,7 +1192,7 @@ class VideoSplitterApp(ctk.CTk):
             if self.get_current_mode() == "Edit":
                 self.change_mode("Add", False)
         else:
-            segment = self.get_segment_by_id(id)
+            segment = self.segments.get_segment_by_id(id)
             if segment is None:
                 self.set_status_warning(t("No segments to display"))
                 self.select_segment_id()
@@ -1053,20 +1201,20 @@ class VideoSplitterApp(ctk.CTk):
             if self.get_current_mode() == "Add":
                 self.change_mode("Edit", False)
 
-            if segment["layer"] != self.selected_layer:
-                self.change_layer(str(segment["layer"]), False)
+            if segment.layer != self.selected_layer:
+                self.change_layer(str(segment.layer), False)
 
             self.set_segment_list_id_color(id)
 
         self.draw_all_segment_ranges()
 
     def set_segment_list_id_color(self, segment_id):
-        for segment in self.segment_list:
-            if segment["id"] == segment_id and (
-                segment["layer"] == self.selected_layer
+        for segment in self.segments:
+            if segment.segment_id == segment_id and (
+                segment.layer == self.selected_layer
                 or self.show_full_list.get()
             ):
-                ui = segment.get("ui")
+                ui = segment.ui
                 if ui and ui["num_btn"].winfo_exists():
                     ui["num_btn"].configure(
                         fg_color="#1F6AA5", hover_color="#36719F"
@@ -1075,10 +1223,10 @@ class VideoSplitterApp(ctk.CTk):
                     print("No UI found for segment:", segment)
 
     def reset_segment_list_id_color(self):
-        for segment in self.segment_list:
-            ui = segment.get("ui")
+        for segment in self.segments:
+            ui = segment.ui
             if (
-                segment["layer"] == self.selected_layer
+                segment.layer == self.selected_layer
                 or self.show_full_list.get()
             ):
                 if ui and ui["num_btn"].winfo_exists():
@@ -1102,9 +1250,12 @@ class VideoSplitterApp(ctk.CTk):
                 layer=layer, draw_current=layer == self.selected_layer
             )
 
-    def draw_segment_ranges(self, layer=None, draw_current=True):
+    def draw_segment_ranges(self, layer=None, draw_current=None):
         if layer is None:
             layer = self.selected_layer
+        if draw_current is None:
+            draw_current = layer == self.selected_layer
+
         seek_canvas = self.seek_canvases[layer - 1]["seek_canvas"]
 
         # Clear the canvas
@@ -1140,24 +1291,17 @@ class VideoSplitterApp(ctk.CTk):
             visible_range = 1
 
         # Draw segment ranges
-        filtered_segment_list = [
-            segment
-            for segment in self.segment_list
-            if segment["layer"] == layer
-        ]
+        filtered_segment_list = self.segments.filter_by_layers([layer])
 
         for segment in filtered_segment_list:
-            start_time = segment["start"]
-            end_time = segment["end"]
-
-            start_frame = start_time * self.fps
-            end_frame = end_time * self.fps
+            start_frame = segment.start_frame
+            end_frame = segment.end_frame
 
             id_is_selected = (
-                segment["id"] == self.selected_segment_id
+                segment.segment_id == self.selected_segment_id
                 and self.get_current_mode() == "Edit"
             )
-            color = "#ffff00" if id_is_selected else "#00ff00"
+            range_color = "#ffff00" if id_is_selected else "#00ff00"
 
             # Draw only if within zoom range
             if (
@@ -1181,9 +1325,9 @@ class VideoSplitterApp(ctk.CTk):
                     0,
                     x2,
                     canvas_height,
-                    fill=color,
+                    fill=range_color,
                     stipple="gray50",
-                    outline=color,
+                    outline=range_color,
                     width=2,
                 )
 
@@ -1254,27 +1398,31 @@ class VideoSplitterApp(ctk.CTk):
             ),
         )
 
-    def get_next_free_time(self, start_time, layer=None):
+    def get_next_free_time(self, start_time, layer):
         """Get the next free time after start_time in the selected layer"""
-        segment = self.get_segment_by_time(start_time, layer, True, False)
+        segment = self.segments.get_segment_by_time(
+            start_time, layer, True, False
+        )
 
         if segment is None:
             if start_time >= self.total_frames / self.fps:
                 return None
             return start_time
         else:
-            return self.get_next_free_time(segment["end"], layer)
+            return self.get_next_free_time(segment.end_time, layer)
 
-    def get_previous_free_time(self, end_time, layer=None):
+    def get_previous_free_time(self, end_time, layer):
         """Get the previous free time before end_time in the selected layer"""
-        segment = self.get_segment_by_time(end_time, layer, False, True)
+        segment = self.segments.get_segment_by_time(
+            end_time, layer, False, True
+        )
 
         if segment is None:
             if end_time <= 0:
                 return None
             return end_time
         else:
-            return self.get_previous_free_time(segment["start"], layer)
+            return self.get_previous_free_time(segment.start_time, layer)
 
     def set_start_point(self):
         if self.get_current_mode() == "Add":
@@ -1284,7 +1432,9 @@ class VideoSplitterApp(ctk.CTk):
 
     def set_new_start_point(self):
         """Set the start point at the next free time from current position"""
-        free_time = self.get_next_free_time(self.current_frame / self.fps)
+        free_time = self.get_next_free_time(
+            self.current_frame / self.fps, self.selected_layer
+        )
 
         if free_time is None:
             messagebox.showwarning(
@@ -1316,17 +1466,17 @@ class VideoSplitterApp(ctk.CTk):
         if id is None:
             id = self.selected_segment_id
 
-        segment = self.get_segment_by_id(id)
+        segment = self.segments.get_segment_by_id(id)
         if segment is None:
             messagebox.showwarning(
                 t("Warning"), t("Selected segment not found")
             )
             return
-        old_start_time = segment["start"]
+        old_start_time = segment.start_time
 
-        selected_segment = self.get_segment_by_time(
+        selected_segment = self.segments.get_segment_by_time(
             self.current_frame / self.fps,
-            layer=segment["layer"],
+            layer=segment.layer,
             include_start=True,
             include_end=False,
         )
@@ -1334,7 +1484,7 @@ class VideoSplitterApp(ctk.CTk):
         last_segment = None
         if selected_segment is not None:
             previous_segments = self.get_segments_before_time(
-                segment["start"], layer=segment["layer"]
+                segment.start_time, layer=segment.layer
             )
 
             if previous_segments:
@@ -1342,8 +1492,11 @@ class VideoSplitterApp(ctk.CTk):
                 # current segment
                 last_segment = previous_segments[-1]
 
-                if selected_segment["id"] != id:
-                    if self.current_frame / self.fps <= last_segment["start"]:
+                if selected_segment.segment_id != id:
+                    if (
+                        self.current_frame / self.fps
+                        <= last_segment.start_time
+                    ):
                         messagebox.showwarning(
                             t("Warning"),
                             t(
@@ -1358,14 +1511,14 @@ class VideoSplitterApp(ctk.CTk):
         self.update_segment_time(id, "start", str(new_start_time))
 
         if last_segment is not None and (
-            last_segment["end"] > new_start_time
+            last_segment.end_time > new_start_time
             or (
-                last_segment["end"] == old_start_time
+                last_segment.end_time == old_start_time
                 and self.link_boundaries_enabled.get()
             )
         ):
             self.update_segment_time(
-                last_segment["id"], "end", str(new_start_time)
+                last_segment.segment_id, "end", str(new_start_time)
             )
             self.set_status_info(
                 t(
@@ -1395,7 +1548,9 @@ class VideoSplitterApp(ctk.CTk):
             )
             return
 
-        free_time = self.get_previous_free_time(self.current_frame / self.fps)
+        free_time = self.get_previous_free_time(
+            self.current_frame / self.fps, self.selected_layer
+        )
 
         if free_time is None:
             messagebox.showwarning(
@@ -1415,20 +1570,20 @@ class VideoSplitterApp(ctk.CTk):
             )
             return
 
-        filtered_segment_list = [
-            segment
-            for segment in self.segment_list
-            if segment["layer"] == self.selected_layer
-        ]
-        self.segment_list.append(
-            {
-                "id": self.get_max_list_index() + 1,
-                "start": start_time,
-                "end": end_time,
-                "duration": end_time - start_time,
-                "title": f"part{len(filtered_segment_list)+1:03d}",
-                "layer": self.selected_layer,
-            }
+        filtered_segment_list = self.segments.filter_by_layers(
+            [self.selected_layer]
+        )
+        self.segments.add_segment(
+            Segment(
+                **{
+                    "fps": self.fps,
+                    "segment_id": self.get_max_list_index() + 1,
+                    "start_frame": self.start_frame,
+                    "end_frame": end_frame,
+                    "title": f"part{len(filtered_segment_list)+1:03d}",
+                    "layer": self.selected_layer,
+                }
+            )
         )
 
         # Set current position to new end point
@@ -1448,7 +1603,7 @@ class VideoSplitterApp(ctk.CTk):
         # Reset start point button
         self.reset_start_point()
 
-        if len(self.segment_list) > 0:
+        if len(self.segments) > 0:
             self.execute_button.configure(state="normal")
 
     def edit_end_point(self, id=None):
@@ -1456,17 +1611,17 @@ class VideoSplitterApp(ctk.CTk):
         if id is None:
             id = self.selected_segment_id
 
-        segment = self.get_segment_by_id(id)
+        segment = self.segments.get_segment_by_id(id)
         if segment is None:
             messagebox.showwarning(
                 t("Warning"), t("Selected segment not found")
             )
             return
-        old_end_time = segment["end"]
+        old_end_time = segment.end_time
 
-        selected_segment = self.get_segment_by_time(
+        selected_segment = self.segments.get_segment_by_time(
             self.current_frame / self.fps,
-            layer=segment["layer"],
+            layer=segment.layer,
             include_start=False,
             include_end=True,
         )
@@ -1474,7 +1629,7 @@ class VideoSplitterApp(ctk.CTk):
         next_segment = None
         if selected_segment is not None:
             next_segments = self.get_segments_after_time(
-                segment["end"], layer=segment["layer"]
+                segment.end_time, layer=segment.layer
             )
 
             if next_segments:
@@ -1482,8 +1637,8 @@ class VideoSplitterApp(ctk.CTk):
                 # current segment
                 next_segment = next_segments[0]
 
-                if selected_segment["id"] != id:
-                    if self.current_frame / self.fps > next_segment["end"]:
+                if selected_segment.segment_id != id:
+                    if self.current_frame / self.fps > next_segment.end_time:
                         messagebox.showwarning(
                             t("Warning"),
                             t(
@@ -1498,14 +1653,14 @@ class VideoSplitterApp(ctk.CTk):
         self.update_segment_time(id, "end", str(new_end_time))
 
         if next_segment is not None and (
-            next_segment["start"] <= new_end_time
+            next_segment.start_time <= new_end_time
             or (
-                next_segment["start"] == old_end_time
+                next_segment.start_time == old_end_time
                 and self.link_boundaries_enabled.get()
             )
         ):
             self.update_segment_time(
-                next_segment["id"], "start", str(new_end_time)
+                next_segment.segment_id, "start", str(new_end_time)
             )
             self.set_status_info(
                 t(
@@ -1516,59 +1671,14 @@ class VideoSplitterApp(ctk.CTk):
 
     def reset_list_indexes(self):
         """Reassign IDs to segments based on their order in the full list"""
-        for i, segment in enumerate(self.segment_list):
-            segment["id"] = i + 1
+        for i, segment in enumerate(self.segments):
+            segment.segment_id = i + 1
 
     def get_max_list_index(self):
         """Get the maximum ID in the full segment list"""
-        if not self.segment_list:
+        if not self.segments:
             return 0
-        return max(segment["id"] for segment in self.segment_list)
-
-    def get_index_by_id(self, id):
-        """Get the index of a segment in the full list by its ID"""
-        for i, segment in enumerate(self.segment_list):
-            if segment["id"] == id:
-                return i
-        return None
-
-    def get_segment_by_id(self, id):
-        """Get the segment dict by its ID"""
-        for i, segment in enumerate(self.segment_list):
-            if segment["id"] == id:
-                return segment
-        return None
-
-    def get_segment_by_time(
-        self, time_sec, layer=None, include_start=True, include_end=True
-    ):
-        """Get the segment dict by time (in seconds)"""
-        if layer is None:
-            layer = self.selected_layer
-
-        filtered_segment_list = [
-            segment
-            for segment in self.segment_list
-            if segment["layer"] == layer
-        ]
-
-        for segment in filtered_segment_list:
-            start = segment["start"]
-            end = segment["end"]
-
-            if include_start and include_end:
-                if start <= time_sec <= end:
-                    return segment
-            elif include_start:
-                if start <= time_sec < end:
-                    return segment
-            elif include_end:
-                if start < time_sec <= end:
-                    return segment
-            else:
-                if start < time_sec < end:
-                    return segment
-        return None
+        return max(segment.segment_id for segment in self.segments)
 
     def get_segments_before_time(self, time_sec, layer=None):
         """Get the segments before the specified time (in seconds)"""
@@ -1577,12 +1687,12 @@ class VideoSplitterApp(ctk.CTk):
 
         filtered_segment_list = [
             segment
-            for segment in self.segment_list
-            if segment["layer"] == layer and segment["end"] <= time_sec
+            for segment in self.segments
+            if segment.layer == layer and segment.end_time <= time_sec
         ]
 
         # Return sorted list
-        return sorted(filtered_segment_list, key=lambda x: x["end"])
+        return sorted(filtered_segment_list, key=lambda x: x.end_time)
 
     def get_segments_after_time(self, time_sec, layer=None):
         """Get the segments after the specified time (in seconds)"""
@@ -1591,12 +1701,12 @@ class VideoSplitterApp(ctk.CTk):
 
         filtered_segment_list = [
             segment
-            for segment in self.segment_list
-            if segment["layer"] == layer and segment["start"] >= time_sec
+            for segment in self.segments
+            if segment.layer == layer and segment.start_time >= time_sec
         ]
 
         # Return sorted list
-        return sorted(filtered_segment_list, key=lambda x: x["start"])
+        return sorted(filtered_segment_list, key=lambda x: x.start_time)
 
     def reset_start_point(self):
         self.start_frame = None
@@ -1623,18 +1733,14 @@ class VideoSplitterApp(ctk.CTk):
             self.layer_label.configure(text_color="white")
 
         segment_list = sorted(
-            [
-                segment
-                for segment in self.segment_list
-                if segment.get("layer") in layers
-            ],
-            key=lambda x: x["id"],
+            [segment for segment in self.segments if segment.layer in layers],
+            key=lambda x: x.segment_id,
         )
         for i, segment in enumerate(segment_list):
             row_frame = ctk.CTkFrame(self.list_container)
             row_frame.grid(row=i, column=0, sticky="ew", pady=2)
-            id = segment.get("id")
-            layer = segment.get("layer")
+            id = segment.segment_id
+            layer = segment.layer
             is_selected = str(id) == self.mode_selector.get()
 
             # Number button (jump to start position on click)
@@ -1655,7 +1761,7 @@ class VideoSplitterApp(ctk.CTk):
 
             # Title (editable)
             title_entry = ctk.CTkEntry(row_frame)
-            title_entry.insert(0, segment.get("title", f"part{i+1:03d}"))
+            title_entry.insert(0, segment.title)
             title_entry.grid(row=0, column=2, padx=2, sticky="ew")
             title_entry.bind(
                 "<FocusOut>",
@@ -1672,7 +1778,7 @@ class VideoSplitterApp(ctk.CTk):
 
             # Start time (editable)
             start_entry = ctk.CTkEntry(row_frame, width=80)
-            start_entry.insert(0, utils.format_time(segment["start"]))
+            start_entry.insert(0, utils.format_time(segment.start_time))
             start_entry.grid(row=0, column=3, padx=2)
             start_entry.bind(
                 "<FocusOut>",
@@ -1689,7 +1795,7 @@ class VideoSplitterApp(ctk.CTk):
 
             # End time (editable)
             end_entry = ctk.CTkEntry(row_frame, width=80)
-            end_entry.insert(0, utils.format_time(segment["end"]))
+            end_entry.insert(0, utils.format_time(segment.end_time))
             end_entry.grid(row=0, column=4, padx=2)
             end_entry.bind(
                 "<FocusOut>",
@@ -1707,7 +1813,7 @@ class VideoSplitterApp(ctk.CTk):
             # Duration (auto-calculated)
             ctk.CTkLabel(
                 row_frame,
-                text=utils.format_time(segment["duration"]),
+                text=utils.format_time(segment.duration),
                 width=80,
             ).grid(row=0, column=5, padx=2)
 
@@ -1726,7 +1832,7 @@ class VideoSplitterApp(ctk.CTk):
 
             row_frame.grid_columnconfigure(2, weight=1)
 
-            segment["ui"] = {
+            segment.ui = {
                 "frame": row_frame,
                 "num_btn": num_btn,
                 "title_entry": title_entry,
@@ -1736,13 +1842,13 @@ class VideoSplitterApp(ctk.CTk):
 
     def update_segment_title(self, id, title):
         """Update title"""
-        index = self.get_index_by_id(id)
+        index = self.segments.get_index_by_id(id)
         if index is not None:
             # Remove characters not allowed in filenames
             safe_title = "".join(c for c in title if c.isalnum()).strip()
             if not safe_title:
                 safe_title = f"part{index+1:03d}"
-            self.segment_list[index]["title"] = safe_title
+            self.segments[index]["title"] = safe_title
             self.update_segment_list_display()
 
     def jump_to_segment(self, id: int, position: str | None = None):
@@ -1759,18 +1865,17 @@ class VideoSplitterApp(ctk.CTk):
         Returns:
             None: This function does not return a value. It updates the current frame and display based on the segment's position.
         """
-        segment = self.get_segment_by_id(id)
+        segment = self.segments.get_segment_by_id(id)
         if segment is None:
             print("Segment not found")
             return
 
-        layer = segment.get("layer")
+        layer = segment.layer
 
         if layer != self.selected_layer:
             self.change_layer(str(layer))
 
-        start_time = segment["start"]
-        start_frame = round(start_time * self.fps)
+        start_frame = segment.start_frame
 
         if position is None or position not in (
             "start",
@@ -1791,14 +1896,13 @@ class VideoSplitterApp(ctk.CTk):
         elif position in ("end", "e"):
             # Jump to end
             # If already at start, jump to end
-            end_time = segment["end"]
-            target_frame = round(end_time * self.fps)
+            target_frame = segment.end_frame
             self.set_status_info(
                 t("Jumped to the end of the selected segment")
             )
         else:
             # Jump to middle
-            mid_time = (segment["start"] + segment["end"]) / 2
+            mid_time = (segment.start_time + segment.end_time) / 2
             target_frame = round(mid_time * self.fps)
             self.set_status_info(
                 t("Jumped to the middle of the selected segment")
@@ -1822,12 +1926,11 @@ class VideoSplitterApp(ctk.CTk):
 
     def update_segment_time(self, id, time_type, time_str):
         """Parse time string and update segment list"""
-        index = self.get_index_by_id(id)
-        if index is None:
-            print("Segment ID not found")
+        segment = self.segments.get_segment_by_id(id)
+        if segment is None:
+            print("Segment not found")
             return
 
-        segment_list = self.segment_list
         try:
             # Convert to seconds
             total_seconds = utils.parse_time(time_str)
@@ -1838,30 +1941,25 @@ class VideoSplitterApp(ctk.CTk):
 
             # Update segment list
             if time_type == "start":
-                if total_seconds >= segment_list[index]["end"]:
+                if total_seconds >= segment.end_time:
                     messagebox.showwarning(
                         t("Warning"), t("Start time must be before end time")
                     )
                     self.update_segment_list_display()
                     return
-                segment_list[index]["start"] = total_seconds
+                segment.start_time = total_seconds
             else:  # end
-                if total_seconds <= segment_list[index]["start"]:
+                if total_seconds <= segment.start_time:
                     messagebox.showwarning(
                         t("Warning"), t("End time must be after start time")
                     )
                     self.update_segment_list_display()
                     return
-                segment_list[index]["end"] = total_seconds
-
-            # Recalculate duration
-            segment_list[index]["duration"] = (
-                segment_list[index]["end"] - segment_list[index]["start"]
-            )
+                segment.end_time = total_seconds
 
             # Update display
             self.update_segment_list_display()
-            self.draw_segment_ranges()
+            self.draw_segment_ranges(segment.layer)
 
         except (ValueError, IndexError):
             messagebox.showwarning(
@@ -1871,18 +1969,16 @@ class VideoSplitterApp(ctk.CTk):
             self.update_segment_list_display()
 
     def delete_segment(self, id):
-        segment = self.get_segment_by_id(id)
+        segment = self.segments.get_segment_by_id(id)
         if segment is None:
             print("Segment ID not found")
             return
-        self.segment_list = [
-            segment for segment in self.segment_list if segment["id"] != id
-        ]
+        self.segments.remove_segment_by_id(id)
         self.update_segment_list_display()
-        layer = segment["layer"]
+        layer = segment.layer
         self.draw_segment_ranges(layer, layer == self.selected_layer)
 
-        if len(self.segment_list) == 0:
+        if len(self.segments) == 0:
             self.execute_button.configure(state="disabled")
 
     def clear_list(self):
@@ -1891,19 +1987,13 @@ class VideoSplitterApp(ctk.CTk):
         else:
             layers = [self.selected_layer]
 
-        filtered_segment_list = [
-            row for row in self.segment_list if row["layer"] in layers
-        ]
+        filtered_segment_list = self.segments.filter_by_layers(layers)
 
         if len(filtered_segment_list) > 0:
             if messagebox.askyesno(
                 t("Confirm"), t("Clear all segment settings?")
             ):
-                self.segment_list = [
-                    row
-                    for row in self.segment_list
-                    if row["layer"] not in layers
-                ]
+                self.segments.clear(layers)
                 self.start_frame = None
 
                 # Reset start point button
@@ -1936,7 +2026,7 @@ class VideoSplitterApp(ctk.CTk):
                 layers = [self.selected_layer]
 
         count_items = len(
-            [row for row in self.segment_list if row["layer"] in layers]
+            [row for row in self.segments if row["layer"] in layers]
         )
 
         if count_items == 0:
@@ -1960,9 +2050,7 @@ class VideoSplitterApp(ctk.CTk):
                 )
                 self.progress.set(i / total if total else 0)
 
-            filtered_segment_list = [
-                row for row in self.segment_list if row["layer"] in layers
-            ]
+            filtered_segment_list = self.segments.filter_by_layers(layers)
 
             split_video(
                 self.video_path,
@@ -2041,7 +2129,9 @@ class VideoSplitterApp(ctk.CTk):
                 project_data = {
                     "video_path": self.video_path,
                     "output_path": self.output_path,
-                    "segment_list": self.segment_list,
+                    "segment_list": [
+                        segment.to_dict() for segment in self.segments
+                    ],
                 }
 
                 with open(file_path, "w", encoding="utf-8") as f:
@@ -2083,7 +2173,10 @@ class VideoSplitterApp(ctk.CTk):
                 self.reset_video_controls()
 
                 # Restore segment list
-                self.segment_list = project_data.get("segment_list", [])
+                self.segments = SegmentManager.from_dicts(
+                    self.fps,
+                    project_data.get("segment_list", []),
+                )
                 self.update_segment_list_display()
                 self.draw_all_segment_ranges()
 
@@ -2093,7 +2186,7 @@ class VideoSplitterApp(ctk.CTk):
                 # Reset start point
                 self.reset_start_point()
 
-                if len(self.segment_list) > 0:
+                if len(self.segments) > 0:
                     self.execute_button.configure(state="normal")
 
                 messagebox.showinfo(t("Done"), t("Project file loaded"))
