@@ -106,8 +106,9 @@ class Segment:
 
 
 class SegmentManager:
-    def __init__(self, fps, items=None):
+    def __init__(self, fps, total_frames, items=None):
         self.fps = fps
+        self.total_frames = total_frames
         self.items = items if items is not None else []
         self._ui = {}
 
@@ -118,7 +119,7 @@ class SegmentManager:
         return len(self.items)
 
     @classmethod
-    def from_dicts(cls, fps, dicts):
+    def from_dicts(cls, fps, total_frames, dicts):
         segments = []
         for d in dicts:
             segment = Segment(
@@ -129,7 +130,7 @@ class SegmentManager:
                 end_frame=round(d.get("end", d.get("end_time")) * fps),
             )
             segments.append(segment)
-        return cls(fps, segments)
+        return cls(fps, total_frames, segments)
 
     def get_max_list_index(self):
         """Get the maximum ID in the full segment list"""
@@ -215,6 +216,61 @@ class SegmentManager:
             for segment in self.items
             if segment.segment_id != segment_id
         ]
+
+    def get_next_free_time(self, start_time, layer):
+        """Get the next free time after start_time in the selected layer"""
+        segment = self.get_segment_by_time(start_time, layer, True, False)
+
+        if segment is None:
+            if start_time >= self.total_frames / self.fps:
+                return None
+            return start_time
+        else:
+            return self.get_next_free_time(segment.end_time, layer)
+
+    def get_previous_free_time(self, end_time, layer):
+        """Get the previous free time before end_time in the selected layer"""
+        segment = self.get_segment_by_time(end_time, layer, False, True)
+
+        if segment is None:
+            if end_time <= 0:
+                return None
+            return end_time
+        else:
+            return self.get_previous_free_time(segment.start_time, layer)
+
+    def reset_list_indexes(self):
+        """Reassign IDs to segments based on their order in the full list"""
+        for i, segment in enumerate(self.items):
+            segment.segment_id = i + 1
+
+    def get_segments_before_time(self, time_sec, layer=None):
+        """Get the segments before the specified time (in seconds)"""
+        if layer is None:
+            layer = self.selected_layer
+
+        filtered_segment_list = [
+            segment
+            for segment in self.items
+            if segment.layer == layer and segment.end_time <= time_sec
+        ]
+
+        # Return sorted list
+        return sorted(filtered_segment_list, key=lambda x: x.end_time)
+
+    def get_segments_after_time(self, time_sec, layer=None):
+        """Get the segments after the specified time (in seconds)"""
+        if layer is None:
+            layer = self.selected_layer
+
+        filtered_segment_list = [
+            segment
+            for segment in self.items
+            if segment.layer == layer and segment.start_time >= time_sec
+        ]
+
+        # Return sorted list
+        return sorted(filtered_segment_list, key=lambda x: x.start_time)
 
 
 class VideoSplitterApp(ctk.CTk):
@@ -959,7 +1015,7 @@ class VideoSplitterApp(ctk.CTk):
         self.video_path = file_path
         self.cap, self.total_frames, self.fps = load_video(file_path)
         self.duration = self.total_frames / self.fps
-        self.segments = SegmentManager(fps=self.fps)
+        self.segments = SegmentManager(self.fps, self.total_frames)
 
     def reset_video_controls(self):
         self.seek_slider.configure(to=self.total_frames - 1, state="normal")
@@ -1245,7 +1301,7 @@ class VideoSplitterApp(ctk.CTk):
     def reset_segment_list_id_color(self):
         if self.segments is None:
             return
-        
+
         for segment in self.segments:
             ui = segment.ui
             if (
@@ -1421,32 +1477,6 @@ class VideoSplitterApp(ctk.CTk):
             ),
         )
 
-    def get_next_free_time(self, start_time, layer):
-        """Get the next free time after start_time in the selected layer"""
-        segment = self.segments.get_segment_by_time(
-            start_time, layer, True, False
-        )
-
-        if segment is None:
-            if start_time >= self.total_frames / self.fps:
-                return None
-            return start_time
-        else:
-            return self.get_next_free_time(segment.end_time, layer)
-
-    def get_previous_free_time(self, end_time, layer):
-        """Get the previous free time before end_time in the selected layer"""
-        segment = self.segments.get_segment_by_time(
-            end_time, layer, False, True
-        )
-
-        if segment is None:
-            if end_time <= 0:
-                return None
-            return end_time
-        else:
-            return self.get_previous_free_time(segment.start_time, layer)
-
     def set_start_point(self):
         if self.get_current_mode() == "Add":
             self.set_new_start_point()
@@ -1455,7 +1485,7 @@ class VideoSplitterApp(ctk.CTk):
 
     def set_new_start_point(self):
         """Set the start point at the next free time from current position"""
-        free_time = self.get_next_free_time(
+        free_time = self.segments.get_next_free_time(
             self.current_frame / self.fps, self.selected_layer
         )
 
@@ -1506,8 +1536,8 @@ class VideoSplitterApp(ctk.CTk):
 
         last_segment = None
         if selected_segment is not None:
-            previous_segments = self.get_segments_before_time(
-                segment.start_time, layer=segment.layer
+            previous_segments = self.segments.get_segments_before_time(
+                segment.start_time, segment.layer
             )
 
             if previous_segments:
@@ -1571,7 +1601,7 @@ class VideoSplitterApp(ctk.CTk):
             )
             return
 
-        free_time = self.get_previous_free_time(
+        free_time = self.segments.get_previous_free_time(
             self.current_frame / self.fps, self.selected_layer
         )
 
@@ -1639,8 +1669,8 @@ class VideoSplitterApp(ctk.CTk):
 
         next_segment = None
         if selected_segment is not None:
-            next_segments = self.get_segments_after_time(
-                segment.end_time, layer=segment.layer
+            next_segments = self.segments.get_segments_after_time(
+                segment.end_time, segment.layer
             )
 
             if next_segments:
@@ -1679,39 +1709,6 @@ class VideoSplitterApp(ctk.CTk):
                     + "adjusted."
                 )
             )
-
-    def reset_list_indexes(self):
-        """Reassign IDs to segments based on their order in the full list"""
-        for i, segment in enumerate(self.segments):
-            segment.segment_id = i + 1
-
-    def get_segments_before_time(self, time_sec, layer=None):
-        """Get the segments before the specified time (in seconds)"""
-        if layer is None:
-            layer = self.selected_layer
-
-        filtered_segment_list = [
-            segment
-            for segment in self.segments
-            if segment.layer == layer and segment.end_time <= time_sec
-        ]
-
-        # Return sorted list
-        return sorted(filtered_segment_list, key=lambda x: x.end_time)
-
-    def get_segments_after_time(self, time_sec, layer=None):
-        """Get the segments after the specified time (in seconds)"""
-        if layer is None:
-            layer = self.selected_layer
-
-        filtered_segment_list = [
-            segment
-            for segment in self.segments
-            if segment.layer == layer and segment.start_time >= time_sec
-        ]
-
-        # Return sorted list
-        return sorted(filtered_segment_list, key=lambda x: x.start_time)
 
     def reset_start_point(self):
         self.start_frame = None
@@ -1850,13 +1847,11 @@ class VideoSplitterApp(ctk.CTk):
 
     def update_segment_title(self, id, title):
         """Update title"""
-        index = self.segments.get_index_by_id(id)
-        if index is not None:
+        segment = self.segments.get_segment_by_id(id)
+        if segment is not None:
             # Remove characters not allowed in filenames
             safe_title = "".join(c for c in title if c.isalnum()).strip()
-            if not safe_title:
-                safe_title = f"part{index+1:03d}"
-            self.segments[index]["title"] = safe_title
+            segment.title = safe_title
             self.update_segment_list_display()
 
     def jump_to_segment(self, id: int, position: str | None = None):
@@ -2193,6 +2188,7 @@ class VideoSplitterApp(ctk.CTk):
                 # Restore segment list
                 self.segments = SegmentManager.from_dicts(
                     self.fps,
+                    self.total_frames,
                     project_data.get("segment_list", []),
                 )
                 self.update_segment_list_display()
