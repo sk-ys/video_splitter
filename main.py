@@ -61,6 +61,7 @@ class Segment:
         self.title = title
         self.start_frame = start_frame
         self.end_frame = end_frame
+        self._ui = {}
 
     def to_dict(self):
         return {
