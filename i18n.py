@@ -114,7 +114,8 @@ translations = {
         "No video loaded": "No video loaded",
         "Time format is incorrect. Format: mm:ss.mmm or mm:ss": "Time format is incorrect. Format: mm:ss.mmm or mm:ss",
         "Confirm": "Confirm",
-        "Clear all segment settings?": "Clear all segment settings?",
+        "Clear all segments?": "Clear all segments?",
+        "Clear all segments in the current layer?": "Clear all segments in the current layer?",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -225,5 +226,7 @@ translations = {
         "End point must be before the next segment ends.": "終了ポイントは次のセグメントの終了前である必要があります。",
         "End point updated and next segment's start point adjusted.": "終了ポイントが更新され、次のセグメントの開始ポイントが調整されました。",
         "Jumped to the middle of the selected segment": "選択したセグメントの中央位置にジャンプしました",
+        "Clear all segments?": "すべてのセグメントをクリアしますか？",
+        "Clear all segments in the current layer?": "現在のレイヤーのすべてのセグメントをクリアしますか？",
     },
 }

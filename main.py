@@ -1991,7 +1991,12 @@ class VideoSplitterApp(ctk.CTk):
 
         if len(filtered_segment_list) > 0:
             if messagebox.askyesno(
-                t("Confirm"), t("Clear all segment settings?")
+                t("Confirm"),
+                (
+                    t("Clear all segments?")
+                    if self.show_full_list.get()
+                    else t("Clear all segments in the current layer?")
+                ),
             ):
                 self.segments.clear(layers)
                 self.start_frame = None
@@ -2004,7 +2009,8 @@ class VideoSplitterApp(ctk.CTk):
                 )
 
                 self.update_segment_list_display()
-                self.draw_segment_ranges()
+                for layer in layers:
+                    self.draw_segment_ranges(layer)
                 self.execute_button.configure(state="disabled")
 
     def select_output_folder(self):
