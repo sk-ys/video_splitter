@@ -827,7 +827,7 @@ class VideoSplitterApp(ctk.CTk):
         self.execute_button = ctk.CTkButton(
             self.right_frame,
             text=t("Split Execute"),
-            command=self.execute_segment,
+            command=self.execute_split,
             height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
             fg_color="green",
@@ -2025,7 +2025,7 @@ class VideoSplitterApp(ctk.CTk):
         if folder:
             self.output_path = folder
 
-    def execute_segment(self, layers=None):
+    def execute_split(self, layers=None):
         if not self.output_path:
             messagebox.showwarning(
                 t("Warning"), t("Output folder not selected")
@@ -2048,10 +2048,10 @@ class VideoSplitterApp(ctk.CTk):
 
         self.execute_button.configure(state="disabled")
         threading.Thread(
-            target=self.segment_video_thread, args=(layers,), daemon=True
+            target=self.split_video_thread, args=(layers,), daemon=True
         ).start()
 
-    def segment_video_thread(self, layers):
+    def split_video_thread(self, layers):
         if layers is None:
             layers = self.layers
 
