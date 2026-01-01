@@ -771,11 +771,11 @@ class VideoSplitterApp(ctk.CTk):
             row=0, column=0, padx=5, pady=0, sticky="w"
         )
 
-        self.mode_selector = ctk.CTkOptionMenu(
+        self.mode_selector = ctk.CTkButton(
             self.mode_selector_frame,
-            values=[t("Add"), t("Edit")],
-            command=self.change_mode,
-            width=80,
+            text=t("Add mode"),
+            command=self.toggle_mode,
+            width=60,
             state="disabled",
         )
         self.mode_selector.grid(row=0, column=1, padx=(0, 5), pady=5)
@@ -820,6 +820,39 @@ class VideoSplitterApp(ctk.CTk):
         parent.grid_columnconfigure(3, weight=1)
         parent.grid_columnconfigure(4, weight=1)
 
+    def set_mode(self, mode):
+        """Set the mode selector value
+        Args:
+            mode (str): "Add" or "Edit"
+
+        Returns: None
+        """
+        if mode not in ["Add", "Edit"]:
+            raise ValueError('Mode must be "Add" or "Edit"')
+
+        if mode == self.get_current_mode():
+            return
+
+        if mode == "Edit":
+            mode_display_value = t("Edit mode")
+            fg_color = "#2FA572"
+            hover_color = "#106A43"
+        else:
+            mode_display_value = t("Add mode")
+            fg_color = "#1f6aa5"
+            hover_color = "#144870"
+        self.mode_selector.configure(
+            text=mode_display_value, fg_color=fg_color, hover_color=hover_color
+        )
+
+    def toggle_mode(self):
+        """Toggle between Add/Edit mode
+        Returns: None
+        """
+        current_mode = self.get_current_mode()
+        new_mode = "Edit" if current_mode == "Add" else "Add"
+        self.change_mode(new_mode)
+
     def change_mode(self, mode=None, select_segment=True):
         """Change between Add/Edit mode
         Args:
@@ -829,7 +862,7 @@ class VideoSplitterApp(ctk.CTk):
         """
         if mode is None or mode not in ["Add", "Edit"]:
             mode = self.get_current_mode()
-        mode_display_value = t("Edit") if mode == "Edit" else t("Add")
+        mode_display_value = t("Edit mode") if mode == "Edit" else t("Add mode")
 
         if mode == "Edit":
             if self.selected_segment_id is not None:
@@ -847,7 +880,7 @@ class VideoSplitterApp(ctk.CTk):
                     t("Warning"), t("No segments available to edit.")
                 )
                 mode = "Add"
-                mode_display_value = t("Add")
+                mode_display_value = t("Add mode")
 
         if mode == "Edit":
             self.status_text.info(t("Edit mode enabled"))
@@ -861,11 +894,12 @@ class VideoSplitterApp(ctk.CTk):
                 self.unselect_segment_id()
 
         # Update selector if needed
-        if self.mode_selector.get() != mode_display_value:
-            self.mode_selector.set(mode_display_value)
+        self.set_mode(mode)
 
     def get_current_mode(self):
-        return "Edit" if self.mode_selector.get() == t("Edit") else "Add"
+        return (
+            "Edit" if self.mode_selector.cget("text") == t("Edit mode") else "Add"
+        )
 
     def toggle_link_boundaries(self):
         if self.link_boundaries_enabled.get():
