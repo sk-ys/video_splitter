@@ -437,6 +437,7 @@ class VideoSplitterApp(ctk.CTk):
             self.setup_seekbar_canvases_ui(self.seek_canvases_frame)
             self.update_seekbar_range_display()
             self.update_segment_list_display()
+            self.change_layer(str(self.selected_layer))
 
     def setup_ui(self):
         # Main layout: two resizable columns (left/right)
