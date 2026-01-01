@@ -58,7 +58,11 @@ def load_video_dialog():
     return filedialog.askopenfilename(
         title=t("Select video file"),
         filetypes=[
-            (t("Select video file"), "*.mp4 *.avi *.mov *.mkv"),
+            (
+                t("Select video file"),
+                "*.mp4 *.avi *.mov *.mkv *.flv *.wmv "
+                + "*.webm *.mpg *.mpeg *.3gp *.mts *.ts *.vob",
+            ),
             (t("Select"), "*.*"),
         ],
     )
