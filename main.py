@@ -705,6 +705,15 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.jump_to_time_button.grid(row=0, column=3, padx=5, pady=5)
 
+        self.snapshot_button = ctk.CTkButton(
+            parent,
+            text="📷",
+            command=self.take_snapshot,
+            width=30,
+            state="disabled",
+        )
+        self.snapshot_button.grid(row=0, column=4, padx=5, pady=5)
+
     def setup_seekbar_canvases_ui(self, parent):
         self.seek_canvases = []
         for layer in self.layers:
@@ -1147,6 +1156,7 @@ class VideoSplitterApp(ctk.CTk):
         self.start_button.configure(state="normal")
         self.end_button.configure(state="normal")
         self.mode_selector.configure(state="normal")
+        self.snapshot_button.configure(state="normal")
 
         self.current_frame = 0
         self.zoom_center = 0
@@ -1258,6 +1268,40 @@ class VideoSplitterApp(ctk.CTk):
             except ValueError:
                 messagebox.showerror(
                     t("Error"), t("Invalid time format entered.")
+                )
+
+    def take_snapshot(self):
+        if self.vp is None:
+            return
+
+        base_name = os.path.splitext(os.path.basename(self.vp.video_path))[0]
+        current_time_str = utils.format_time(
+            self.current_frame / self.vp.fps, "hh-mm-ss.sss"
+        )
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG Image", "*.png"), ("All Files", "*.*")],
+            title=t("Save Snapshot As"),
+            initialfile=f"{base_name}_"
+            + f"{current_time_str}"
+            + f"[{self.current_frame}].png",
+        )
+
+        if file_path:
+            self.vp.cap.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+            ret, frame = self.vp.cap.read()
+
+            if ret:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(frame_rgb)
+                img.save(file_path)
+                self.status_text.info(
+                    t("Snapshot saved to") + f": {file_path}"
+                )
+            else:
+                messagebox.showerror(
+                    t("Error"), t("Failed to capture snapshot.")
                 )
 
     def seek_video(self, value):

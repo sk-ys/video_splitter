@@ -117,6 +117,9 @@ translations = {
         "Clear all segments?": "Clear all segments?",
         "Clear all segments in the current layer?": "Clear all segments in the current layer?",
         "Number of default Layers": "Number of default Layers",
+        "Save Snapshot As": "Save Snapshot As",
+        "Snapshot saved to": "Snapshot saved to",
+        "Failed to capture snapshot.": "Failed to capture snapshot.",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -230,5 +233,8 @@ translations = {
         "Clear all segments?": "すべてのセグメントをクリアしますか？",
         "Clear all segments in the current layer?": "現在のレイヤーのすべてのセグメントをクリアしますか？",
         "Number of default Layers": "デフォルトのレイヤー数",
+        "Save Snapshot As": "スナップショットを保存",
+        "Snapshot saved to": "スナップショットを保存しました",
+        "Failed to capture snapshot.": "スナップショットの取得に失敗しました",
     },
 }
