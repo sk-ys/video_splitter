@@ -50,7 +50,36 @@ def load_video(video_path):
         total_frames (int): Total number of frames
         fps (float): Video frame rate
     """
-    cap = cv2.VideoCapture(video_path)
+    cap = None
+    if has_ffmpeg_support():
+        cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+
+        if cap.isOpened():
+            print(
+                "[INFO]FFMPEG support detected and video opened "
+                + "with FFMPEG backend."
+            )
+        else:
+            print(
+                "[INFO]FFMPEG support detected "
+                + "but failed to open video with FFMPEG backend."
+            )
+            cap.release()
+            cap = None
+
+    if cap is None:
+        cap = cv2.VideoCapture(video_path)
+
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = cap.get(cv2.CAP_PROP_FPS)
     return cap, total_frames, fps
+
+
+def has_ffmpeg_support() -> bool:
+    """Check if OpenCV is built with FFMPEG support."""
+    try:
+        info = cv2.getBuildInformation()
+    except Exception:
+        return False
+
+    return "FFMPEG:YES" in info.upper().replace(" ", "")
