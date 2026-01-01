@@ -3,7 +3,7 @@ import tkinter as tk
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 import cv2
-from video_utils import load_video, split_video
+import video_utils
 from PIL import Image
 import threading
 import os
@@ -279,7 +279,9 @@ class VideoProject:
     def __init__(self, video_path, output_path=None):
         self.video_path = video_path
         self.output_path = output_path
-        self.cap, self.total_frames, self.fps = utils.load_video(video_path)
+        self.cap, self.total_frames, self.fps = video_utils.load_video(
+            video_path
+        )
         self.segments = SegmentManager(self.fps, self.total_frames)
 
     def __del__(self):
@@ -2238,7 +2240,7 @@ class VideoSplitterApp(ctk.CTk):
 
             filtered_segment_list = self.vp.segments.filter_by_layers(layers)
 
-            split_video(
+            video_utils.split_video(
                 self.video_path,
                 filtered_segment_list,
                 self.vp.output_path,

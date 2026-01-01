@@ -62,15 +62,3 @@ def load_video_dialog():
             (t("Select"), "*.*"),
         ],
     )
-
-
-def load_video(video_path):
-    import cv2
-
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        raise IOError("Cannot open video file")
-
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    return cap, total_frames, fps
