@@ -862,7 +862,6 @@ class VideoSplitterApp(ctk.CTk):
         """
         if mode is None or mode not in ["Add", "Edit"]:
             mode = self.get_current_mode()
-        mode_display_value = t("Edit mode") if mode == "Edit" else t("Add mode")
 
         if mode == "Edit":
             if self.selected_segment_id is not None:
@@ -898,7 +897,9 @@ class VideoSplitterApp(ctk.CTk):
 
     def get_current_mode(self):
         return (
-            "Edit" if self.mode_selector.cget("text") == t("Edit mode") else "Add"
+            "Edit"
+            if self.mode_selector.cget("text") == t("Edit mode")
+            else "Add"
         )
 
     def toggle_link_boundaries(self):
