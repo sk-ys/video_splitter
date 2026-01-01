@@ -276,7 +276,7 @@ wheels = [
 
 [[package]]
 name = "video-splitter"
-version = "0.7.19"
+version = "0.7.20"
 source = { virtual = "." }
 dependencies = [
     { name = "customtkinter" },

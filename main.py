@@ -1342,8 +1342,33 @@ class VideoSplitterApp(ctk.CTk):
                 )
 
     def seek_video(self, value):
-        # Calculate zoom range
         visible_frames = self.vp.total_frames * (self.zoom_range / 100)
+
+        # Adjust zoom center if slider is at edges
+        old_zoom_center = self.zoom_center
+        zoom_adjustment_step = visible_frames / 20
+        if value == 0 and (self.zoom_center > visible_frames / 2):
+            self.zoom_center = max(
+                visible_frames / 2, self.zoom_center - zoom_adjustment_step
+            )
+        elif value == self.vp.total_frames - 1 and (
+            self.zoom_center + visible_frames / 2 < self.vp.total_frames - 1
+        ):
+            self.zoom_center = min(
+                self.vp.total_frames - 1 - visible_frames / 2,
+                self.zoom_center + zoom_adjustment_step,
+            )
+
+        if old_zoom_center != self.zoom_center:
+            self.update_zoom_range()
+            self.update_seekbar_range_display()
+
+            new_value = 1 if value == 0 else value - 1
+            self.seek_slider.set(new_value)
+            self.seek_video(new_value)
+            return
+
+        # Calculate zoom range
         start_frame = max(0, self.zoom_center - visible_frames / 2)
         end_frame = min(self.vp.total_frames - 1, start_frame + visible_frames)
 
@@ -1354,7 +1379,7 @@ class VideoSplitterApp(ctk.CTk):
             else:
                 start_frame = max(0, end_frame - visible_frames)
 
-        # Convert slider value (range 0-100) to actual frame position
+        # Convert slider value to actual frame position
         slider_range = self.seek_slider.cget("to") - self.seek_slider.cget(
             "from_"
         )
