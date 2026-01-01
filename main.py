@@ -2327,7 +2327,7 @@ class VideoSplitterApp(ctk.CTk):
             self.update_idletasks()
 
             # Redraw canvas
-            if self.vp.total_frames > 0:
+            if self.vp is not None and self.vp.total_frames > 0:
                 self.draw_all_segment_ranges()
 
     def on_closing(self):
