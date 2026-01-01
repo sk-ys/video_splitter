@@ -479,6 +479,8 @@ class VideoSplitterApp(ctk.CTk):
 
         self.setup_right_ui(self.main_frame)
 
+        self.video_cache = utils.SimpleCache(max_size=200)
+
     def setup_left_ui(self, parent):
         # Left: Video preview area
         self.left_frame = ctk.CTkFrame(parent)
@@ -1176,6 +1178,7 @@ class VideoSplitterApp(ctk.CTk):
         file_path = utils.load_video_dialog()
         if file_path and os.path.exists(file_path):
             try:
+                self.video_cache.clear()
                 self.vp = VideoProject(file_path)
                 self.reset_video_controls()
                 self.update_segment_list_display()
@@ -1207,29 +1210,35 @@ class VideoSplitterApp(ctk.CTk):
         self.update_length_label(False)
 
     def update_frame(self):
-        if self.vp.cap is not None:
+        if self.vp is None or self.vp.cap is None:
+            return
+
+        frame = self.video_cache.get(self.current_frame)
+        if frame is None:
             self.vp.cap.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
             ret, frame = self.vp.cap.read()
-
             if ret:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                self.video_cache.set(self.current_frame, frame)
 
-                # Resize
-                h, w = frame.shape[:2]
-                max_width = 800
-                max_height = 450
-                scale = min(max_width / w, max_height / h)
-                new_w, new_h = round(w * scale), round(h * scale)
+        if frame is not None:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                frame = cv2.resize(frame, (new_w, new_h))
+            # Resize
+            h, w = frame.shape[:2]
+            max_width = 800
+            max_height = 450
+            scale = min(max_width / w, max_height / h)
+            new_w, new_h = round(w * scale), round(h * scale)
 
-                img = Image.fromarray(frame)
-                ctk_img = ctk.CTkImage(
-                    light_image=img, dark_image=img, size=(new_w, new_h)
-                )
+            frame = cv2.resize(frame, (new_w, new_h))
 
-                self.video_label.configure(image=ctk_img, text="")
-                self.video_label.image = ctk_img
+            img = Image.fromarray(frame)
+            ctk_img = ctk.CTkImage(
+                light_image=img, dark_image=img, size=(new_w, new_h)
+            )
+
+            self.video_label.configure(image=ctk_img, text="")
+            self.video_label.image = ctk_img
 
     def toggle_play(self):
         self.is_playing = not self.is_playing

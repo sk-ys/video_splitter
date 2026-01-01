@@ -18,3 +18,16 @@ def test_time_str_to_sec():
     assert utils.time_str_to_sec("3661.456") == 3661.456
     with pytest.raises(ValueError):
         utils.time_str_to_sec("invalid_time")
+
+def test_simple_cache():
+    cache = utils.SimpleCache(max_size=2)
+    cache.set("a", 1)
+    cache.set("b", 2)
+    assert cache.get("a") == 1
+    cache.set("c", 3)
+    assert cache.get("b") is None  # "b" should be evicted
+    assert cache.get("c") == 3
+    
+    cache.clear()
+    assert cache.get("a") is None
+    assert cache.get("c") is None

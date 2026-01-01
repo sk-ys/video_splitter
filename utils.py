@@ -66,3 +66,26 @@ def load_video_dialog():
             (t("Select"), "*.*"),
         ],
     )
+
+
+class SimpleCache:
+    def __init__(self, max_size=100):
+        self.cache = {}
+        self.max_size = max_size
+
+    def get(self, key):
+        value = self.cache.get(key)
+        if value is not None:
+            # Move accessed item to the end to mark it as recently used
+            self.cache.pop(key)
+            self.cache[key] = value
+        return value
+
+    def set(self, key, value):
+        if len(self.cache) >= self.max_size:
+            # Remove the first item in the cache (simple FIFO)
+            self.cache.pop(next(iter(self.cache)))
+        self.cache[key] = value
+
+    def clear(self):
+        self.cache = {}
