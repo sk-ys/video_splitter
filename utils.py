@@ -12,22 +12,44 @@ lang = config["DEFAULT"].get("language", "en")
 t = lambda s: i18n.translations[lang].get(s, s)
 
 
-def format_time(seconds):
-    """Format seconds to mm:ss.sss"""
-    m = int(seconds // 60)
+def format_time(seconds, format_type="hh:mm:ss.sss"):
+    """Format seconds to hh:mm:ss.sss"""
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
     s = seconds % 60
-    return f"{m:02d}:{s:06.3f}"
+    if format_type == "hh:mm:ss.sss":
+        return f"{h:02d}:{m:02d}:{s:06.3f}"
+    elif format_type == "mm:ss.sss":
+        total_minutes = int(seconds // 60)
+        return f"{total_minutes:02d}:{s:06.3f}"
+    elif format_type == "hh-mm-ss.sss":
+        return f"{h:02d}-{m:02d}-{s:06.3f}"
+    elif format_type == "mm-ss.sss":
+        total_minutes = int(seconds // 60)
+        return f"{total_minutes:02d}-{s:06.3f}"
+    elif format_type == "ss.sss":
+        return f"{seconds:.3f}"
+    elif format_type == "hhmmss.sss":
+        return f"{h:02d}{m:02d}{s:06.3f}"
+    else:
+        raise ValueError("Invalid format type")
 
 
 def time_str_to_sec(time_str):
-    """Parse time string in seconds or mm:ss.sss format to seconds"""
+    """Parse time string in seconds or hh:mm:ss.sss or mm:ss.sss format to seconds"""
     if ":" in time_str:
         parts = time_str.split(":")
-        if len(parts) != 2:
+        if len(parts) not in (2, 3):
             raise ValueError("Invalid time format")
-        minutes = int(parts[0])
-        seconds = float(parts[1])
-        return minutes * 60 + seconds
+        if len(parts) == 3:
+            hours = int(parts[0])
+            minutes = int(parts[1])
+            seconds = float(parts[2])
+            return hours * 3600 + minutes * 60 + seconds
+        else:
+            minutes = int(parts[0])
+            seconds = float(parts[1])
+            return minutes * 60 + seconds
     else:
         return float(time_str)
 
