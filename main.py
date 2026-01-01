@@ -1241,19 +1241,33 @@ class VideoSplitterApp(ctk.CTk):
             self.video_label.image = ctk_img
 
     def toggle_play(self):
-        self.is_playing = not self.is_playing
-
         if self.is_playing:
-            self.play_button.configure(text="⏸ " + t("Pause"))
-            threading.Thread(target=self.play_video, daemon=True).start()
+            self.pause_video()
         else:
-            self.play_button.configure(text="▶ " + t("Play"))
+            self.play_video()
+
+    def play_video(self):
+        if not self.is_playing:
+            self.is_playing = True
+            self.play_button.configure(
+                text="⏸ " + t("Pause"),
+                fg_color="indian red",
+                hover_color="firebrick",
+            )
+            threading.Thread(target=self.play_video_core, daemon=True).start()
+
+    def pause_video(self):
+        if self.is_playing:
+            self.is_playing = False
+            self.play_button.configure(
+                text="▶ " + t("Play"),
+                fg_color="#1f6aa5",
+                hover_color="#144870",
+            )
 
     def prev_frame(self):
         """Go back 1 frame"""
-        if self.is_playing:
-            self.is_playing = False
-            self.play_button.configure(text="▶ " + t("Play"))
+        self.pause_video()
 
         if self.current_frame > 0:
             self.current_frame -= 1
@@ -1264,9 +1278,7 @@ class VideoSplitterApp(ctk.CTk):
 
     def next_frame(self):
         """Advance 1 frame"""
-        if self.is_playing:
-            self.is_playing = False
-            self.play_button.configure(text="▶ " + t("Play"))
+        self.pause_video()
 
         if self.current_frame < self.vp.total_frames - 1:
             self.current_frame += 1
@@ -1275,7 +1287,7 @@ class VideoSplitterApp(ctk.CTk):
             self.update_time_label()
             self.update_seekbar_range_display()
 
-    def play_video(self):
+    def play_video_core(self):
         while (
             self.is_playing and self.current_frame < self.vp.total_frames - 1
         ):
@@ -1286,8 +1298,7 @@ class VideoSplitterApp(ctk.CTk):
             self.after(round(1000 / self.vp.fps))
 
         if self.current_frame >= self.vp.total_frames - 1:
-            self.is_playing = False
-            self.play_button.configure(text="▶ " + t("Play"))
+            self.pause_video()
 
     def jump_to_frame(self, frame_num):
         self.current_frame = max(0, min(frame_num, self.vp.total_frames - 1))
