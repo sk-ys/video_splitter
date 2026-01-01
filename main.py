@@ -2276,7 +2276,7 @@ class VideoSplitterApp(ctk.CTk):
             filtered_segment_list = self.vp.segments.filter_by_layers(layers)
 
             video_utils.split_video(
-                self.video_path,
+                self.vp.video_path,
                 filtered_segment_list,
                 self.vp.output_path,
                 progress_callback=progress_callback,
