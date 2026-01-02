@@ -31,3 +31,11 @@ def test_simple_cache():
     cache.clear()
     assert cache.get("a") is None
     assert cache.get("c") is None
+    
+def test_simple_cache_unlimited():
+    cache = utils.SimpleCache(max_size=0)  # Unlimited size
+    for i in range(100):
+        cache.set(f"key{i}", i)
+    for i in range(100):
+        assert cache.get(f"key{i}") == i
+

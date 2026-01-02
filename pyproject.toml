@@ -1,6 +1,6 @@
 [project]
 name = "video-splitter"
-version = "0.7.22"
+version = "0.7.23"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"

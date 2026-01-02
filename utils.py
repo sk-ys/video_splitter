@@ -69,20 +69,37 @@ def load_video_dialog():
 
 
 class SimpleCache:
+    """
+    A simple in-memory cache with a maximum size and basic FIFO eviction policy.
+    Attributes:
+        cache (dict): The underlying dictionary storing cached items.
+        max_size (int): The maximum number of items the cache can hold.
+            If set to 0 or negative, the cache size is unlimited.
+    Methods:
+        get(key):
+            Retrieve a value from the cache by key. If the key exists and the cache
+            has a positive max_size, the item is marked as recently used.
+            Returns the value if found, otherwise None.
+        set(key, value):
+            Add a key-value pair to the cache. If the cache exceeds max_size,
+            the oldest item is evicted (FIFO policy).
+        clear():
+            Remove all items from the cache.
+    """
     def __init__(self, max_size=100):
         self.cache = {}
         self.max_size = max_size
 
     def get(self, key):
         value = self.cache.get(key)
-        if value is not None:
+        if value is not None and self.max_size > 0:
             # Move accessed item to the end to mark it as recently used
             self.cache.pop(key)
             self.cache[key] = value
         return value
 
     def set(self, key, value):
-        if len(self.cache) >= self.max_size:
+        if self.max_size > 0 and len(self.cache) >= self.max_size:
             # Remove the first item in the cache (simple FIFO)
             self.cache.pop(next(iter(self.cache)))
         self.cache[key] = value

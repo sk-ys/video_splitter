@@ -122,6 +122,8 @@ translations = {
         "Save Snapshot As": "Save Snapshot As",
         "Snapshot saved to": "Snapshot saved to",
         "Failed to capture snapshot.": "Failed to capture snapshot.",
+        "Start preloading frames": "Start preloading frames",
+        "[n] frames preloaded": "[n] frames preloaded",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -240,5 +242,7 @@ translations = {
         "Save Snapshot As": "スナップショットを保存",
         "Snapshot saved to": "スナップショットを保存しました",
         "Failed to capture snapshot.": "スナップショットの取得に失敗しました",
+        "Start preloading frames": "フレームの事前読み込みを開始",
+        "[n] frames preloaded": "[n] フレームを事前読み込みしました",
     },
 }

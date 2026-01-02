@@ -424,6 +424,9 @@ class VideoSplitterApp(ctk.CTk):
         self.start_frame = None
         self.selected_segment_id = None
 
+        self.video_cache = utils.SimpleCache(max_size=30)
+        self.video_cache_for_head = utils.SimpleCache(max_size=0)
+        self.video_cache_for_head_frame_count = 300
         self.status_text = None
         self.setup_ui()
 
@@ -478,8 +481,6 @@ class VideoSplitterApp(ctk.CTk):
         self.setup_separator_ui(self.main_frame)
 
         self.setup_right_ui(self.main_frame)
-
-        self.video_cache = utils.SimpleCache(max_size=200)
 
     def setup_left_ui(self, parent):
         # Left: Video preview area
@@ -1179,7 +1180,9 @@ class VideoSplitterApp(ctk.CTk):
         if file_path and os.path.exists(file_path):
             try:
                 self.video_cache.clear()
+                self.video_cache_for_head.clear()
                 self.vp = VideoProject(file_path)
+                self.preload_head_frames()
                 self.reset_video_controls()
                 self.update_segment_list_display()
             except Exception as e:
@@ -1209,16 +1212,65 @@ class VideoSplitterApp(ctk.CTk):
 
         self.update_length_label(False)
 
+    def preload_head_frames(self):
+        """Preload first N frames into cache for to improve stability"""
+        self.status_text.info(f"{t('Start preloading frames')}...")
+
+        # Note: If using set to 0, it may cause unexpected gap in some videos.
+        # self.vp.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+        max_frames = min(
+            self.video_cache_for_head_frame_count, self.vp.total_frames
+        )
+
+        for i in range(max_frames):
+            ret, frame = self.vp.cap.read()
+            if ret:
+                self.video_cache_for_head.set(i, frame.copy())
+            else:
+                break
+
+        self.status_text.info(
+            f"{t('[n] frames preloaded.').replace('[n]', str(max_frames))}"
+        )
+
+        # Reset to frame 0
+        self.vp.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
     def update_frame(self):
         if self.vp is None or self.vp.cap is None:
             return
 
-        frame = self.video_cache.get(self.current_frame)
+        if self.current_frame <= self.video_cache_for_head_frame_count:
+            frame = self.video_cache_for_head.get(self.current_frame)
+        else:
+            frame = self.video_cache.get(self.current_frame)
+
         if frame is None:
-            self.vp.cap.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+            if self.current_frame != self.vp.cap.get(cv2.CAP_PROP_POS_FRAMES):
+                self.vp.cap.set(cv2.CAP_PROP_POS_FRAMES, self.current_frame)
+                if self.current_frame != self.vp.cap.get(
+                    cv2.CAP_PROP_POS_FRAMES
+                ):
+                    print("[Warn]Frame seek failed.")
+                    # Sample code for reloading VideoCapture
+                    # self.vp.cap.release()
+                    # self.vp.cap = cv2.VideoCapture(self.vp.video_path)
+                    # self.vp.cap.set(
+                    #     cv2.CAP_PROP_POS_FRAMES, self.current_frame
+                    # )
             ret, frame = self.vp.cap.read()
+
             if ret:
-                self.video_cache.set(self.current_frame, frame)
+                self.current_frame = (
+                    int(self.vp.cap.get(cv2.CAP_PROP_POS_FRAMES)) - 1
+                )
+                if self.current_frame <= self.video_cache_for_head_frame_count:
+                    self.video_cache_for_head.set(
+                        self.current_frame, frame.copy()
+                    )
+                else:
+                    self.video_cache.set(self.current_frame, frame.copy())
 
         if frame is not None:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
