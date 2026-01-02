@@ -124,6 +124,8 @@ translations = {
         "Failed to capture snapshot.": "Failed to capture snapshot.",
         "Start preloading frames": "Start preloading frames",
         "[n] frames preloaded": "[n] frames preloaded",
+        "Video Cache Size (frames)": "Video Cache Size (frames)",
+        "Preload Head Frame Count": "Preload Head Frame Count",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -244,5 +246,7 @@ translations = {
         "Failed to capture snapshot.": "スナップショットの取得に失敗しました",
         "Start preloading frames": "フレームの事前読み込みを開始",
         "[n] frames preloaded": "[n] フレームを事前読み込みしました",
+        "Video Cache Size (frames)": "ビデオキャッシュサイズ（フレーム）",
+        "Preload Head Frame Count": "事前読み込み先頭フレーム数",
     },
 }

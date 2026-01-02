@@ -1,6 +1,7 @@
 from datetime import datetime
 import tkinter as tk
 import customtkinter as ctk
+from ctk_widgets import CTkSpinbox
 from tkinter import filedialog, messagebox
 import cv2
 import video_utils
@@ -401,6 +402,151 @@ class StatusText:
         self.text("", duration=0)
 
 
+class SettingsDialog(ctk.CTkToplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.parent = parent
+
+        self.title(t("Settings"))
+        self.geometry("400x300")
+
+        self.grid_rowconfigure(0, weight=1)  # Content
+        self.grid_rowconfigure(1, weight=0)  # Buttons
+        self.grid_columnconfigure(0, weight=1)
+
+        # Content
+        self.content_frame = ctk.CTkFrame(self)
+        self.content_frame.grid(
+            row=0, column=0, padx=10, pady=5, sticky="nsew"
+        )
+        self.content_frame.grid_columnconfigure(0, weight=1)
+
+        # Language selection
+        ctk.CTkLabel(self.content_frame, text=t("Language") + ":").grid(
+            row=0, column=0, padx=5, pady=5, sticky="w"
+        )
+
+        self.lang_var = ctk.StringVar(value=lang)
+        self.lang_option = ctk.CTkOptionMenu(
+            self.content_frame,
+            values=["en", "ja"],
+            variable=self.lang_var,
+            command=self.change_language,
+        )
+        self.lang_option.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+
+        # Layer count selection
+        self.layer_count_label = ctk.CTkLabel(
+            self.content_frame, text=t("Number of default Layers") + ":"
+        )
+        self.layer_count_label.grid(
+            row=1, column=0, padx=5, pady=5, sticky="w"
+        )
+
+        self.layer_count_var = ctk.IntVar(
+            value=config.getint("DEFAULT", "layer_count", fallback=3)
+        )
+        self.layer_count_spinbox = ctk.CTkOptionMenu(
+            self.content_frame,
+            values=[str(i) for i in range(1, 11)],
+            variable=self.layer_count_var,
+        )
+        self.layer_count_spinbox.grid(
+            row=1, column=1, padx=5, pady=5, sticky="w"
+        )
+
+        # Cache size selection
+        self.cache_size_label = ctk.CTkLabel(
+            self.content_frame, text=t("Video Cache Size (frames)") + ":"
+        )
+        self.cache_size_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.cache_size_spinbox = CTkSpinbox(
+            self.content_frame,
+            initialvalue=config.getint("DEFAULT", "cache_size", fallback=30),
+            min_value=0,
+            max_value=1000,
+            step=10,
+            width=120,
+        )
+        self.cache_size_spinbox.grid(
+            row=2, column=1, padx=5, pady=5, sticky="w"
+        )
+
+        # Preload head frame count selection
+        self.preload_head_frame_count_label = ctk.CTkLabel(
+            self.content_frame, text=t("Preload Head Frame Count") + ":"
+        )
+        self.preload_head_frame_count_label.grid(
+            row=3, column=0, padx=5, pady=5, sticky="w"
+        )
+        self.preload_head_frame_count_spinbox = CTkSpinbox(
+            self.content_frame,
+            initialvalue=config.getint(
+                "DEFAULT", "preload_head_frame_count", fallback=300
+            ),
+            min_value=0,
+            max_value=1000,
+            step=1,
+            width=120,
+        )
+        self.preload_head_frame_count_spinbox.grid(
+            row=3, column=1, padx=5, pady=5, sticky="w"
+        )
+
+        # Buttons
+        self.button_frame = ctk.CTkFrame(self)
+        self.button_frame.grid(row=1, column=0, padx=10, pady=10, sticky="e")
+        self.button_frame.grid_columnconfigure(0, weight=1)
+
+        self.ok_button = ctk.CTkButton(
+            self.button_frame,
+            text=t("OK"),
+            command=self.on_ok,
+            width=80,
+        )
+        self.ok_button.pack(side="left", padx=5, pady=5)
+        self.cancel_button = ctk.CTkButton(
+            self.button_frame,
+            text=t("Cancel"),
+            command=self.on_cancel,
+            width=80,
+        )
+        self.cancel_button.pack(side="left", padx=5, pady=5)
+
+    def on_ok(self):
+        config["DEFAULT"]["language"] = self.lang_var.get()
+        config["DEFAULT"]["layer_count"] = str(self.layer_count_var.get())
+
+        cache_size = self.cache_size_spinbox.get()
+        preload_head_frame_count = self.preload_head_frame_count_spinbox.get()
+        config["DEFAULT"]["cache_size"] = str(cache_size)
+        config["DEFAULT"]["preload_head_frame_count"] = str(
+            preload_head_frame_count
+        )
+        with open("config.ini", "w") as config_file:
+            config.write(config_file)
+        self.destroy()
+        self.parent.set_layer_count(self.layer_count_var.get())
+        self.parent.set_cache_size(cache_size)
+        self.parent.set_preload_head_frame_count(preload_head_frame_count)
+
+    def on_cancel(self):
+        self.destroy()
+
+    def change_language(self, choice):
+        global lang
+        lang = choice
+        change_language(lang)
+        messagebox.showinfo(
+            t("Info"),
+            t(
+                "Language changed. Please restart the application "
+                + "to apply changes."
+            ),
+        )
+
+
 class VideoSplitterApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -441,6 +587,12 @@ class VideoSplitterApp(ctk.CTk):
             self.update_seekbar_range_display()
             self.update_segment_list_display()
             self.change_layer(str(self.selected_layer))
+
+    def set_cache_size(self, size):
+        self.video_cache.max_size = size
+
+    def set_preload_head_frame_count(self, count):
+        self.video_cache_for_head_frame_count = count
 
     def setup_ui(self):
         # Main layout: two resizable columns (left/right)
@@ -1072,107 +1224,9 @@ class VideoSplitterApp(ctk.CTk):
     def seekbar_resize_event(self, event):
         self.after(10, self.draw_all_segment_ranges)
 
-    class SettingsDialog(ctk.CTkToplevel):
-        def __init__(self, parent):
-            super().__init__(parent)
-
-            self.parent = parent
-
-            self.title(t("Settings"))
-            self.geometry("400x300")
-
-            self.grid_rowconfigure(0, weight=1)  # Content
-            self.grid_rowconfigure(1, weight=0)  # Buttons
-            self.grid_columnconfigure(0, weight=1)
-
-            # Content
-            self.content_frame = ctk.CTkFrame(self)
-            self.content_frame.grid(
-                row=0, column=0, padx=10, pady=5, sticky="nsew"
-            )
-            self.content_frame.grid_columnconfigure(0, weight=1)
-
-            # Language selection
-            ctk.CTkLabel(self.content_frame, text=t("Language") + ":").grid(
-                row=0, column=0, padx=5, pady=5, sticky="w"
-            )
-
-            self.lang_var = ctk.StringVar(value=lang)
-            self.lang_option = ctk.CTkOptionMenu(
-                self.content_frame,
-                values=["en", "ja"],
-                variable=self.lang_var,
-                command=self.change_language,
-            )
-            self.lang_option.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-
-            self.layer_count_label = ctk.CTkLabel(
-                self.content_frame, text=t("Number of default Layers") + ":"
-            )
-            self.layer_count_label.grid(
-                row=1, column=0, padx=5, pady=5, sticky="w"
-            )
-
-            self.layer_count_var = ctk.IntVar(
-                value=config.getint("DEFAULT", "layer_count", fallback=3)
-            )
-            self.layer_count_spinbox = ctk.CTkOptionMenu(
-                self.content_frame,
-                values=[str(i) for i in range(1, 11)],
-                variable=self.layer_count_var,
-            )
-            self.layer_count_spinbox.grid(
-                row=1, column=1, padx=5, pady=5, sticky="w"
-            )
-
-            # Buttons
-            self.button_frame = ctk.CTkFrame(self)
-            self.button_frame.grid(
-                row=1, column=0, padx=10, pady=10, sticky="e"
-            )
-            self.button_frame.grid_columnconfigure(0, weight=1)
-
-            self.ok_button = ctk.CTkButton(
-                self.button_frame,
-                text=t("OK"),
-                command=self.on_ok,
-                width=80,
-            )
-            self.ok_button.pack(side="left", padx=5, pady=5)
-            self.cancel_button = ctk.CTkButton(
-                self.button_frame,
-                text=t("Cancel"),
-                command=self.on_cancel,
-                width=80,
-            )
-            self.cancel_button.pack(side="left", padx=5, pady=5)
-
-        def on_ok(self):
-            config["DEFAULT"]["language"] = self.lang_var.get()
-            config["DEFAULT"]["layer_count"] = str(self.layer_count_var.get())
-            with open("config.ini", "w") as config_file:
-                config.write(config_file)
-            self.destroy()
-            self.parent.set_layer_count(self.layer_count_var.get())
-
-        def on_cancel(self):
-            self.destroy()
-
-        def change_language(self, choice):
-            global lang
-            lang = choice
-            change_language(lang)
-            messagebox.showinfo(
-                t("Info"),
-                t(
-                    "Language changed. Please restart the application "
-                    + "to apply changes."
-                ),
-            )
-
     def open_settings(self):
         # Open settings dialog
-        settings_window = self.SettingsDialog(self)
+        settings_window = SettingsDialog(self)
         settings_window.grab_set()
 
     def load_video_dialog(self):
