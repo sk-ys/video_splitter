@@ -3,12 +3,14 @@ import os
 from pathlib import Path
 
 
-def split_video(video_path, segment_list, output_path, progress_callback=None):
+def split_video(
+    video_path, segment_list, output_path, progress_callback=None
+):
     """
     Split the video into segments and save them as files.
     Args:
         video_path (str): Path to the input video file
-        segment_list (list): List of segment info dicts with keys: start, end, title, layer, etc.
+        segment_list (list): List of Segment objects
         output_path (str): Output directory
         progress_callback (callable, optional): Callback to notify progress (index, total)
     """
@@ -16,20 +18,23 @@ def split_video(video_path, segment_list, output_path, progress_callback=None):
     for i, segment in enumerate(segment_list):
         if progress_callback:
             progress_callback(i, len(segment_list))
-        title = segment.get("title", f"part{i+1:03d}")
-        layer = str(segment.get("layer", ""))
+        title = segment.title or f"part{i+1:03d}"
+        layer = str(segment.layer)
         layer = f"l{layer}-" if layer else ""
         output_file = os.path.join(
             output_path, f"{video_name}_{layer}{title}.mp4"
         )
-        cap = cv2.VideoCapture(video_path)
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        if has_ffmpeg_support():
+            cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
+        else:
+            cap = cv2.VideoCapture(video_path)
         fps = cap.get(cv2.CAP_PROP_FPS)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         out = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
-        start_frame = int(segment["start"] * fps)
-        end_frame = int(segment["end"] * fps)
+        start_frame = int(segment.start_time * fps)
+        end_frame = int(segment.end_time * fps)
         cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
         for frame_num in range(start_frame, end_frame):
             ret, frame = cap.read()

@@ -1,7 +1,9 @@
+from pathlib import Path
 import cv2
 import numpy as np
 import pytest
 import video_utils
+import main
 
 
 def create_dummy_video(path, duration_sec=2, fps=10, width=640, height=480):
@@ -26,11 +28,26 @@ def test_load_video(tmp_path):
 
 def test_split_video(tmp_path):
     video_file = tmp_path / "test_video.mp4"
-    create_dummy_video(video_file, duration_sec=5, fps=10)
+    fps = 10
+    create_dummy_video(video_file, duration_sec=5, fps=fps)
 
     segments = [
-        {"start": 0, "end": 2, "title": "part1", "layer": 1},
-        {"start": 2, "end": 5, "title": "part2", "layer": 2},
+        main.Segment(
+            segment_id=1,
+            fps=fps,
+            start_frame=0,
+            end_frame=20,
+            title="part1",
+            layer=1,
+        ),
+        main.Segment(
+            segment_id=2,
+            fps=fps,
+            start_frame=20,
+            end_frame=50,
+            title="part2",
+            layer=2,
+        ),
     ]
     output_dir = tmp_path / "output"
     output_dir.mkdir()
