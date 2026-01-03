@@ -495,6 +495,20 @@ class SettingsDialog(ctk.CTkToplevel):
             row=3, column=1, padx=5, pady=5, sticky="w"
         )
 
+        # Codec selector
+        ctk.CTkLabel(self.content_frame, text=t("Video encoder codec") + ":").grid(
+            row=4, column=0, padx=5, pady=5, sticky="w"
+        )
+        self.codec_var = ctk.StringVar(
+            value=config.get("DEFAULT", "codec", fallback="mp4v")
+        )
+        self.codec_option = ctk.CTkOptionMenu(
+            self.content_frame,
+            values=[codec for codec, _ in self.parent.available_codecs],
+            variable=self.codec_var,
+        )
+        self.codec_option.grid(row=4, column=1, padx=5, pady=5, sticky="w")
+
         # Buttons
         self.button_frame = ctk.CTkFrame(self)
         self.button_frame.grid(row=1, column=0, padx=10, pady=10, sticky="e")
@@ -525,6 +539,7 @@ class SettingsDialog(ctk.CTkToplevel):
         config["DEFAULT"]["preload_head_frame_count"] = str(
             preload_head_frame_count
         )
+        config["DEFAULT"]["codec"] = self.codec_var.get()
         with open("config.ini", "w") as config_file:
             config.write(config_file)
         self.destroy()
@@ -555,6 +570,11 @@ class VideoSplitterApp(ctk.CTk):
         self.title(t("Video Splitter"))
         self.geometry("1400x900")
 
+        self.available_codecs = []
+        threading.Thread(
+            target=self._load_available_codecs, daemon=True
+        ).start()
+
         # Video-related variables
         self.current_frame = 0
         self.is_playing = False
@@ -578,6 +598,9 @@ class VideoSplitterApp(ctk.CTk):
         self.setup_ui()
 
         self.change_layer(self.selected_layer)
+
+    def _load_available_codecs(self):
+        self.available_codecs = video_utils.get_available_codecs()
 
     def set_layer_count(self, count):
         self.layers = list(range(1, count + 1))
@@ -2433,6 +2456,7 @@ class VideoSplitterApp(ctk.CTk):
                 filtered_segment_list,
                 self.vp.output_path,
                 progress_callback=progress_callback,
+                codec=config.get("DEFAULT", "codec"),
             )
             self.progress.set(1.0)
             self.progress_label.configure(text=t("Complete"))

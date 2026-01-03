@@ -126,6 +126,7 @@ translations = {
         "[n] frames preloaded": "[n] frames preloaded",
         "Video Cache Size (frames)": "Video Cache Size (frames)",
         "Preload Head Frame Count": "Preload Head Frame Count",
+        "Video encoder codec": "Video encoder codec",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -248,5 +249,6 @@ translations = {
         "[n] frames preloaded": "[n] フレームを事前読み込みしました",
         "Video Cache Size (frames)": "ビデオキャッシュサイズ（フレーム）",
         "Preload Head Frame Count": "事前読み込み先頭フレーム数",
+        "Video encoder codec": "動画エンコーダーのコーデック",
     },
 }

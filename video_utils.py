@@ -1,10 +1,27 @@
+import tempfile
 import cv2
 import os
 from pathlib import Path
 
+import numpy as np
+
+
+codec_and_extensions = {
+    "xvid": ".avi",
+    "mjpg": ".avi",
+    "mp4v": ".mp4",
+    "h264": ".mp4",
+    "x264": ".mp4",
+    "avc1": ".mp4",
+    "divx": ".avi",
+    "FFV1": ".avi",
+    "vp80": ".webm",
+    "vp90": ".webm",
+}
+
 
 def split_video(
-    video_path, segment_list, output_path, progress_callback=None
+    video_path, segment_list, output_path, progress_callback=None, codec="mp4v"
 ):
     """
     Split the video into segments and save them as files.
@@ -15,6 +32,7 @@ def split_video(
         progress_callback (callable, optional): Callback to notify progress (index, total)
     """
     video_name = Path(video_path).stem
+    extension = codec_and_extensions.get(codec, ".avi")
     for i, segment in enumerate(segment_list):
         if progress_callback:
             progress_callback(i, len(segment_list))
@@ -22,9 +40,9 @@ def split_video(
         layer = str(segment.layer)
         layer = f"l{layer}-" if layer else ""
         output_file = os.path.join(
-            output_path, f"{video_name}_{layer}{title}.mp4"
+            output_path, f"{video_name}_{layer}{title}{extension}"
         )
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        fourcc = cv2.VideoWriter_fourcc(*codec)
         if has_ffmpeg_support():
             cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
         else:
@@ -88,3 +106,41 @@ def has_ffmpeg_support() -> bool:
         return False
 
     return "FFMPEG:YES" in info.upper().replace(" ", "")
+
+
+def get_available_codecs():
+    """Test which codecs are actually available"""
+    test_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+    test_fps = 30
+
+    available_codecs = []
+    for codec, extension in codec_and_extensions.items():
+        fourcc = cv2.VideoWriter_fourcc(*codec)
+
+        with tempfile.NamedTemporaryFile(
+            suffix=extension, delete=False
+        ) as tmp_file:
+            tmp_path = tmp_file.name
+
+        available = False
+        try:
+            test_writer = cv2.VideoWriter(
+                tmp_path, fourcc, test_fps, test_frame.shape[1::-1]
+            )
+            if test_writer.isOpened():
+                test_writer.write(test_frame)
+                test_writer.release()
+
+                if os.path.exists(tmp_path) and os.path.getsize(tmp_path) > 0:
+                    available = True
+
+        except Exception as e:
+            print(f"Error testing codec {codec}: {e}")
+
+        finally:
+            if available:
+                available_codecs.append((codec, extension))
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+    return available_codecs
