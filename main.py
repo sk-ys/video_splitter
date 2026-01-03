@@ -282,7 +282,7 @@ class VideoProject:
         self.video_path = video_path
         self.output_path = output_path
         self.cap, self.total_frames, self.fps = video_utils.load_video(
-            video_path
+            video_path, backend=config.get("DEFAULT", "backend")
         )
         self.segments = SegmentManager(self.fps, self.total_frames)
 
@@ -496,9 +496,9 @@ class SettingsDialog(ctk.CTkToplevel):
         )
 
         # Codec selector
-        ctk.CTkLabel(self.content_frame, text=t("Video encoder codec") + ":").grid(
-            row=4, column=0, padx=5, pady=5, sticky="w"
-        )
+        ctk.CTkLabel(
+            self.content_frame, text=t("Video encoder codec") + ":"
+        ).grid(row=4, column=0, padx=5, pady=5, sticky="w")
         self.codec_var = ctk.StringVar(
             value=config.get("DEFAULT", "codec", fallback="mp4v")
         )
@@ -508,6 +508,20 @@ class SettingsDialog(ctk.CTkToplevel):
             variable=self.codec_var,
         )
         self.codec_option.grid(row=4, column=1, padx=5, pady=5, sticky="w")
+
+        # Backend selector
+        ctk.CTkLabel(
+            self.content_frame, text=t("Video backend (if available)") + ":"
+        ).grid(row=5, column=0, padx=5, pady=5, sticky="w")
+        self.backend_var = ctk.StringVar(
+            value=config.get("DEFAULT", "backend", fallback="opencv")
+        )
+        self.backend_option = ctk.CTkOptionMenu(
+            self.content_frame,
+            values=["opencv", "ffmpeg"],
+            variable=self.backend_var,
+        )
+        self.backend_option.grid(row=5, column=1, padx=5, pady=5, sticky="w")
 
         # Buttons
         self.button_frame = ctk.CTkFrame(self)
@@ -540,6 +554,15 @@ class SettingsDialog(ctk.CTkToplevel):
             preload_head_frame_count
         )
         config["DEFAULT"]["codec"] = self.codec_var.get()
+        if config["DEFAULT"]["backend"] != self.backend_var.get():
+            config["DEFAULT"]["backend"] = self.backend_var.get()
+            messagebox.showinfo(
+                t("Info"),
+                t(
+                    "Video backend changed. "
+                    + "New backend applies on next video load."
+                ),
+            )
         with open("config.ini", "w") as config_file:
             config.write(config_file)
         self.destroy()
@@ -2457,6 +2480,7 @@ class VideoSplitterApp(ctk.CTk):
                 self.vp.output_path,
                 progress_callback=progress_callback,
                 codec=config.get("DEFAULT", "codec"),
+                backend=config.get("DEFAULT", "backend"),
             )
             self.progress.set(1.0)
             self.progress_label.configure(text=t("Complete"))

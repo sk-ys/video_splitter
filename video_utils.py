@@ -21,7 +21,12 @@ codec_and_extensions = {
 
 
 def split_video(
-    video_path, segment_list, output_path, progress_callback=None, codec="mp4v"
+    video_path,
+    segment_list,
+    output_path,
+    progress_callback=None,
+    codec="mp4v",
+    backend="opencv",
 ):
     """
     Split the video into segments and save them as files.
@@ -30,6 +35,8 @@ def split_video(
         segment_list (list): List of Segment objects
         output_path (str): Output directory
         progress_callback (callable, optional): Callback to notify progress (index, total)
+        codec (str): FourCC codec string for output video
+        backend (str): Video backend to use ("opencv" or "ffmpeg")
     """
     video_name = Path(video_path).stem
     extension = codec_and_extensions.get(codec, ".avi")
@@ -43,7 +50,7 @@ def split_video(
             output_path, f"{video_name}_{layer}{title}{extension}"
         )
         fourcc = cv2.VideoWriter_fourcc(*codec)
-        if has_ffmpeg_support():
+        if backend == "ffmpeg" and has_ffmpeg_support():
             cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
         else:
             cap = cv2.VideoCapture(video_path)
@@ -63,18 +70,19 @@ def split_video(
         out.release()
 
 
-def load_video(video_path):
+def load_video(video_path, backend="opencv"):
     """
     Load a video file and return capture object and info.
     Args:
         video_path (str): Path to the input video file
+        backend (str): Video backend to use ("opencv" or "ffmpeg")
     Returns:
         cap (cv2.VideoCapture): Video capture object
         total_frames (int): Total number of frames
         fps (float): Video frame rate
     """
     cap = None
-    if has_ffmpeg_support():
+    if backend == "ffmpeg" and has_ffmpeg_support():
         cap = cv2.VideoCapture(video_path, cv2.CAP_FFMPEG)
 
         if cap.isOpened():

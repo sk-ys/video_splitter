@@ -127,6 +127,8 @@ translations = {
         "Video Cache Size (frames)": "Video Cache Size (frames)",
         "Preload Head Frame Count": "Preload Head Frame Count",
         "Video encoder codec": "Video encoder codec",
+        "Video backend (if available)": "Video backend (if available)",
+        "Video backend changed. New backend applies on next video load.": "Video backend changed. New backend applies on next video load.",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -250,5 +252,7 @@ translations = {
         "Video Cache Size (frames)": "ビデオキャッシュサイズ（フレーム）",
         "Preload Head Frame Count": "事前読み込み先頭フレーム数",
         "Video encoder codec": "動画エンコーダーのコーデック",
+        "Video backend (if available)": "動画バックエンド（利用可能な場合）",
+        "Video backend changed. New backend applies on next video load.": "動画バックエンドが変更されました。次回の動画読み込み時に新しいバックエンドが適用されます。",
     },
 }

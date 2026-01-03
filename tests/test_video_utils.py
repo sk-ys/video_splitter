@@ -25,6 +25,14 @@ def test_load_video(tmp_path):
     assert fps == 10.0
     cap.release()
 
+    if video_utils.has_ffmpeg_support():
+        cap_ffmpeg, total_frames_ffmpeg, fps_ffmpeg = video_utils.load_video(
+            str(video_file), backend="ffmpeg"
+        )
+        assert total_frames_ffmpeg == 30
+        assert fps_ffmpeg == 10.0
+        cap_ffmpeg.release()
+
 
 def test_split_video(tmp_path):
     video_file = tmp_path / "test_video.mp4"
