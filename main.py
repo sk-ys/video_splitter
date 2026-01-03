@@ -631,7 +631,7 @@ class VideoSplitterApp(ctk.CTk):
         if hasattr(self, "seek_canvases_frame"):
             self.clear_seekbar_canvases_ui()
             self.setup_seekbar_canvases_ui(self.seek_canvases_frame)
-            self.update_seekbar_range_display()
+            self.update_seekbar_time_labels()
             self.update_segment_list_display()
             self.change_layer(str(self.selected_layer))
 
@@ -815,7 +815,7 @@ class VideoSplitterApp(ctk.CTk):
 
         # Zoom-related variables
         self.zoom_range = 100  # percent
-        self.zoom_center = 0  # center frame for zoom
+        self.zoom_center_frame = 0  # center frame for zoom
 
         # Split point setting buttons
         self.split_control_frame = ctk.CTkFrame(self.left_frame)
@@ -1304,12 +1304,12 @@ class VideoSplitterApp(ctk.CTk):
         self.snapshot_button.configure(state="normal")
 
         self.current_frame = 0
-        self.zoom_center = 0
+        self.zoom_center_frame = 0
         self.update_zoom_range()
         self.update_frame()
         self.update_time_label()
-        self.update_seekbar_range_display()
-        self.draw_segment_ranges()
+        self.update_seekbar_time_labels()
+        self.draw_all_segment_ranges()
 
         self.update_length_label(False)
 
@@ -1424,10 +1424,10 @@ class VideoSplitterApp(ctk.CTk):
 
         if self.current_frame > 0:
             self.current_frame -= 1
-            self.update_zoom_range()
             self.update_frame()
+            self.update_seekbar_slider_value()
             self.update_time_label()
-            self.update_seekbar_range_display()
+            self.draw_all_segment_ranges()
 
     def next_frame(self):
         """Advance 1 frame"""
@@ -1435,10 +1435,10 @@ class VideoSplitterApp(ctk.CTk):
 
         if self.current_frame < self.vp.total_frames - 1:
             self.current_frame += 1
-            self.update_zoom_range()
             self.update_frame()
+            self.update_seekbar_slider_value()
             self.update_time_label()
-            self.update_seekbar_range_display()
+            self.draw_all_segment_ranges()
 
     def play_video_core(self):
         while (
@@ -1446,8 +1446,9 @@ class VideoSplitterApp(ctk.CTk):
         ):
             self.current_frame += 1
             self.update_frame()
-            self.seek_slider.set(self.current_frame)
+            self.update_seekbar_slider_value()
             self.update_time_label()
+            self.draw_all_segment_ranges()
             self.after(round(1000 / self.vp.fps))
 
         if self.current_frame >= self.vp.total_frames - 1:
@@ -1457,8 +1458,9 @@ class VideoSplitterApp(ctk.CTk):
         self.current_frame = max(0, min(frame_num, self.vp.total_frames - 1))
         self.update_zoom_range()
         self.update_frame()
+        self.update_seekbar_time_labels()
         self.update_time_label()
-        self.update_seekbar_range_display()
+        self.draw_all_segment_ranges()
 
     def jump_to_time(self, time_sec):
         frame_num = round(time_sec * self.vp.fps)
@@ -1516,116 +1518,98 @@ class VideoSplitterApp(ctk.CTk):
                 )
 
     def seek_video(self, value):
-        visible_frames = self.vp.total_frames * (self.zoom_range / 100)
-
-        # Adjust zoom center if slider is at edges
-        old_zoom_center = self.zoom_center
-        zoom_adjustment_step = visible_frames / 20
-        if value == 0 and (self.zoom_center > visible_frames / 2):
-            self.zoom_center = max(
-                visible_frames / 2, self.zoom_center - zoom_adjustment_step
-            )
-        elif value == self.vp.total_frames - 1 and (
-            self.zoom_center + visible_frames / 2 < self.vp.total_frames - 1
-        ):
-            self.zoom_center = min(
-                self.vp.total_frames - 1 - visible_frames / 2,
-                self.zoom_center + zoom_adjustment_step,
-            )
-
-        if old_zoom_center != self.zoom_center:
-            self.update_zoom_range()
-            self.update_seekbar_range_display()
-
-            new_value = 1 if value == 0 else value - 1
-            self.seek_slider.set(new_value)
-            self.seek_video(new_value)
-            return
-
-        # Calculate zoom range
-        start_frame = max(0, self.zoom_center - visible_frames / 2)
-        end_frame = min(self.vp.total_frames - 1, start_frame + visible_frames)
-
-        # Recalculate actual display range (after boundary adjustment)
-        if end_frame - start_frame < visible_frames:
-            if start_frame == 0:
-                end_frame = min(self.vp.total_frames - 1, visible_frames)
-            else:
-                start_frame = max(0, end_frame - visible_frames)
-
-        # Convert slider value to actual frame position
-        slider_range = self.seek_slider.cget("to") - self.seek_slider.cget(
-            "from_"
-        )
-        relative_pos = (
-            float(value) - self.seek_slider.cget("from_")
-        ) / slider_range
-
-        self.current_frame = round(
-            start_frame + relative_pos * (end_frame - start_frame)
-        )
+        """Seek video to specified frame value"""
+        self.current_frame = round(float(value))
         self.current_frame = max(
             0, min(self.current_frame, self.vp.total_frames - 1)
         )
 
         self.update_frame()
         self.update_time_label()
+        self.draw_all_segment_ranges()
 
     def update_zoom_range_slider(self, value):
         self.zoom_range = float(value)
         self.zoom_range_label.configure(text=f"{round(self.zoom_range)}%")
-        self.zoom_center = self.current_frame
+        self.zoom_center_frame = self.current_frame
         self.update_zoom_range()
-        self.update_seekbar_range_display()
+        self.update_seekbar_time_labels()
         self.draw_all_segment_ranges()
 
-    def update_seekbar_range_display(self):
-        """Update seekbar display range"""
+    def update_seekbar_time_labels(self):
+        """Update seekbar display range time labels"""
         if self.vp is None or self.vp.total_frames == 0:
             return
 
-        visible_frames = self.vp.total_frames * (self.zoom_range / 100)
-        start_frame = max(0, self.zoom_center - visible_frames / 2)
-        end_frame = min(self.vp.total_frames - 1, start_frame + visible_frames)
-
-        # Boundary adjustment
-        if end_frame - start_frame < visible_frames:
-            if start_frame == 0:
-                end_frame = min(self.vp.total_frames - 1, visible_frames)
-            else:
-                start_frame = max(0, end_frame - visible_frames)
-
+        start_frame = self.seek_slider.cget("from_")
         start_time = start_frame / self.vp.fps
+
+        end_frame = self.seek_slider.cget("to")
         end_time = end_frame / self.vp.fps
 
         self.seekbar_start_label.configure(text=utils.format_time(start_time))
         self.seekbar_end_label.configure(text=utils.format_time(end_time))
 
-    def update_zoom_range(self):
-        # Adjust seek slider position based on zoom
-        visible_frames = self.vp.total_frames * (self.zoom_range / 100)
-        start_frame = max(0, self.zoom_center - visible_frames / 2)
-        end_frame = min(self.vp.total_frames - 1, start_frame + visible_frames)
+    def update_seekbar_slider_value(self):
+        """Update seekbar slider value based on current frame"""
+        if self.vp is None or self.vp.total_frames == 0:
+            return
 
-        # Boundary adjustment
-        if end_frame - start_frame < visible_frames:
-            if start_frame == 0:
-                end_frame = min(self.vp.total_frames - 1, visible_frames)
+        # Check current slider range
+        slider_from = self.seek_slider.cget("from_")
+        slider_to = self.seek_slider.cget("to")
+
+        # Adjust zoom range if current frame is out of range
+        if self.current_frame < slider_from or self.current_frame > slider_to:
+            if self.current_frame < slider_from:
+                shift_frames = self.current_frame - slider_from
             else:
-                start_frame = max(0, end_frame - visible_frames)
+                shift_frames = self.current_frame - slider_to
 
-        # Convert current frame to slider position
-        if end_frame > start_frame:
-            relative_pos = (self.current_frame - start_frame) / (
-                end_frame - start_frame
+            self.update_zoom_range(shift_frames=shift_frames)
+            self.update_seekbar_time_labels()
+
+        # Update slider value
+        self.seek_slider.set(self.current_frame)
+
+    def update_zoom_range(self, center_frame=None, shift_frames=0):
+        """Update seek slider range based on zoom"""
+        if self.vp is None or self.vp.total_frames == 0:
+            return
+
+        visible_frames = round(self.vp.total_frames * (self.zoom_range / 100))
+
+        if center_frame is None:
+            center_frame = self.seek_slider.cget("from_") + round(
+                visible_frames / 2
             )
-            slider_range = self.seek_slider.cget("to") - self.seek_slider.cget(
-                "from_"
-            )
-            slider_value = (
-                self.seek_slider.cget("from_") + relative_pos * slider_range
-            )
-            self.seek_slider.set(slider_value)
+
+        visible_start_frame = max(
+            0, center_frame - round(visible_frames / 2) + shift_frames
+        )
+        visible_end_frame = min(
+            self.vp.total_frames - 1 + shift_frames,
+            visible_start_frame + visible_frames,
+        )
+
+        # 境界調整
+        if visible_end_frame - visible_start_frame < visible_frames - 1:
+            if visible_start_frame == 0:
+                visible_end_frame = min(
+                    self.vp.total_frames - 1, visible_frames
+                )
+            else:
+                visible_start_frame = max(
+                    0, visible_end_frame - visible_frames
+                )
+
+        # seekbarの値域を表示範囲に設定
+        self.seek_slider.configure(
+            from_=visible_start_frame, to=visible_end_frame
+        )
+
+        # 現在フレームをスライダーに反映
+        self.seek_slider.set(self.current_frame)
 
     def seek_layer_button_click(self, layer):
         self.change_layer(str(layer))
@@ -1752,26 +1736,9 @@ class VideoSplitterApp(ctk.CTk):
         canvas_height = seek_canvas.winfo_height()
 
         # Calculate zoom range
-        visible_frames = self.vp.total_frames * (self.zoom_range / 100)
-        visible_start_frame = max(0, self.zoom_center - visible_frames / 2)
-        visible_end_frame = min(
-            self.vp.total_frames - 1, visible_start_frame + visible_frames
-        )
-
-        # Boundary adjustment
-        if visible_end_frame - visible_start_frame < visible_frames:
-            if visible_start_frame == 0:
-                visible_end_frame = min(
-                    self.vp.total_frames - 1, visible_frames
-                )
-            else:
-                visible_start_frame = max(
-                    0, visible_end_frame - visible_frames
-                )
-
+        visible_start_frame = self.seek_slider.cget("from_")
+        visible_end_frame = self.seek_slider.cget("to")
         visible_range = visible_end_frame - visible_start_frame
-        if visible_range <= 0:
-            visible_range = 1
 
         # Draw segment ranges
         filtered_segment_list = self.vp.segments.filter_by_layers([layer])
@@ -1855,10 +1822,6 @@ class VideoSplitterApp(ctk.CTk):
         self.frame_label.configure(
             text=f"{t("Frame")}: {self.current_frame} / {self.vp.total_frames - 1}"
         )
-
-        # Update canvas
-        for layer in self.layers:
-            self.draw_segment_ranges(layer, layer == self.selected_layer)
 
         # Update end button label if start point is set
         self.update_length_label()
@@ -2335,8 +2298,9 @@ class VideoSplitterApp(ctk.CTk):
         # Update display
         self.update_zoom_range()
         self.update_frame()
+        self.update_seekbar_time_labels()
         self.update_time_label()
-        self.update_seekbar_range_display()
+        self.draw_all_segment_ranges()
 
     def update_segment_time(self, id, time_type, time_str):
         """Parse time string and update segment list"""
