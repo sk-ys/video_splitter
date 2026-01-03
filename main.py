@@ -1247,10 +1247,10 @@ class VideoSplitterApp(ctk.CTk):
         ctk.CTkLabel(self.header_frame, text=t("Title")).grid(
             row=0, column=2, padx=2
         )
-        ctk.CTkLabel(self.header_frame, text=t("Start"), width=80).grid(
+        ctk.CTkLabel(self.header_frame, text=t("Start"), width=90).grid(
             row=0, column=3, padx=2
         )
-        ctk.CTkLabel(self.header_frame, text=t("End"), width=80).grid(
+        ctk.CTkLabel(self.header_frame, text=t("End"), width=90).grid(
             row=0, column=4, padx=2
         )
         ctk.CTkLabel(self.header_frame, text=t("Length"), width=80).grid(
@@ -2193,7 +2193,7 @@ class VideoSplitterApp(ctk.CTk):
             )
 
             # Start time (editable)
-            start_entry = ctk.CTkEntry(row_frame, width=80)
+            start_entry = ctk.CTkEntry(row_frame, width=90)
             start_entry.insert(0, utils.format_time(segment.start_time))
             start_entry.grid(row=0, column=3, padx=2)
             start_entry.bind(
@@ -2210,7 +2210,7 @@ class VideoSplitterApp(ctk.CTk):
             )
 
             # End time (editable)
-            end_entry = ctk.CTkEntry(row_frame, width=80)
+            end_entry = ctk.CTkEntry(row_frame, width=90)
             end_entry.insert(0, utils.format_time(segment.end_time))
             end_entry.grid(row=0, column=4, padx=2)
             end_entry.bind(
