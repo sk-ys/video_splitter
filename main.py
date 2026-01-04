@@ -619,6 +619,11 @@ class VideoSplitterApp(ctk.CTk):
         self.video_cache_for_head_frame_count = 300
         self.status_text = None
         self.is_seeking = False
+        self.prev_frame_click_count = 0
+        self.prev_frame_auto_repeat = False
+        self.next_frame_click_count = 0
+        self.next_frame_auto_repeat = False
+        self.auto_repeat_interval_ms = 300  # Initial delay before auto-repeat
         self.setup_ui()
 
         self.change_layer(self.selected_layer)
@@ -889,20 +894,32 @@ class VideoSplitterApp(ctk.CTk):
         self.prev_frame_button = ctk.CTkButton(
             parent,
             text=f"◀ 1F",
-            command=self.prev_frame,
+            command=lambda: None,
             width=60,
             state="disabled",
         )
         self.prev_frame_button.grid(row=0, column=1, padx=5, pady=5)
+        self.prev_frame_button.bind(
+            "<Button-1>", self.on_prev_frame_button_press
+        )
+        self.prev_frame_button.bind(
+            "<ButtonRelease-1>", self.on_prev_frame_button_release
+        )
 
         self.next_frame_button = ctk.CTkButton(
             parent,
             text=f"1F ▶",
-            command=self.next_frame,
+            command=lambda: None,
             width=60,
             state="disabled",
         )
         self.next_frame_button.grid(row=0, column=2, padx=5, pady=5)
+        self.next_frame_button.bind(
+            "<Button-1>", self.on_next_frame_button_press
+        )
+        self.next_frame_button.bind(
+            "<ButtonRelease-1>", self.on_next_frame_button_release
+        )
 
         self.jump_to_time_button = ctk.CTkButton(
             parent,
@@ -1431,6 +1448,46 @@ class VideoSplitterApp(ctk.CTk):
             self.update_seekbar_slider_value()
             self.update_time_label()
             self.draw_all_segment_ranges()
+
+    def on_prev_frame_button_press(self, event):
+        self.prev_frame_click_count += 1
+        if self.prev_frame_click_count > 1000000:
+            self.prev_frame_click_count = 0
+        prev_frame_click = self.prev_frame_click_count
+        self.prev_frame_auto_repeat = True
+
+        def repeat():
+            if (
+                self.prev_frame_auto_repeat
+                and prev_frame_click == self.prev_frame_click_count
+            ):
+                self.prev_frame()
+                self.after(self.auto_repeat_interval_ms, repeat)
+
+        repeat()
+
+    def on_prev_frame_button_release(self, event):
+        self.prev_frame_auto_repeat = False
+
+    def on_next_frame_button_press(self, event):
+        self.next_frame_click_count += 1
+        if self.next_frame_click_count > 1000000:
+            self.next_frame_click_count = 0
+        next_frame_click = self.next_frame_click_count
+        self.next_frame_auto_repeat = True
+
+        def repeat():
+            if (
+                self.next_frame_auto_repeat
+                and next_frame_click == self.next_frame_click_count
+            ):
+                self.next_frame()
+                self.after(self.auto_repeat_interval_ms, repeat)
+
+        repeat()
+
+    def on_next_frame_button_release(self, event):
+        self.next_frame_auto_repeat = False
 
     def next_frame(self):
         """Advance 1 frame"""
