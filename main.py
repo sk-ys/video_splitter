@@ -618,6 +618,7 @@ class VideoSplitterApp(ctk.CTk):
         self.video_cache_for_head = utils.SimpleCache(max_size=0)
         self.video_cache_for_head_frame_count = 300
         self.status_text = None
+        self.is_seeking = False
         self.setup_ui()
 
         self.change_layer(self.selected_layer)
@@ -788,6 +789,8 @@ class VideoSplitterApp(ctk.CTk):
             command=self.seek_video,
             state="disabled",
         )
+        self.seek_slider.bind("<Button-1>", self.on_seek_start)
+        self.seek_slider.bind("<ButtonRelease-1>", self.on_seek_end)
         self.seek_slider.grid(
             row=2, column=1, columnspan=2, padx=5, pady=0, sticky="ew"
         )
@@ -1519,14 +1522,46 @@ class VideoSplitterApp(ctk.CTk):
 
     def seek_video(self, value):
         """Seek video to specified frame value"""
-        self.current_frame = round(float(value))
-        self.current_frame = max(
-            0, min(self.current_frame, self.vp.total_frames - 1)
-        )
+        value = int(value)
+        if self.current_frame != value:
+            self.current_frame = value
+            self.current_frame = max(
+                0, min(self.current_frame, self.vp.total_frames - 1)
+            )
+            self.update_frame()
+            self.update_time_label()
+            self.draw_all_segment_ranges()
 
-        self.update_frame()
-        self.update_time_label()
-        self.draw_all_segment_ranges()
+    def seek_video_timer_event(self):
+        shift_frames = 0
+        if self.is_seeking:
+            if (
+                self.current_frame > 0
+                and self.seek_slider.cget("from_") == self.current_frame
+            ):
+                shift_frames = -1
+            elif (
+                self.current_frame < self.vp.total_frames - 1
+                and self.seek_slider.cget("to") == self.current_frame
+            ):
+                shift_frames = 1
+
+            if shift_frames != 0:
+                self.current_frame += shift_frames
+                self.update_frame()
+                self.update_time_label()
+                self.update_zoom_range(shift_frames=shift_frames)
+                self.update_seekbar_time_labels()
+                self.draw_all_segment_ranges()
+
+            self.after(int(1000 / self.vp.fps), self.seek_video_timer_event)
+
+    def on_seek_start(self, event):
+        self.is_seeking = True
+        self.seek_video_timer_event()
+
+    def on_seek_end(self, event):
+        self.is_seeking = False
 
     def update_zoom_range_slider(self, value):
         self.zoom_range = float(value)
