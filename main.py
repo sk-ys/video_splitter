@@ -1684,7 +1684,7 @@ class VideoSplitterApp(ctk.CTk):
             visible_start_frame + visible_frames,
         )
 
-        # 境界調整
+        # Adjust start/end if range is smaller than expected
         if visible_end_frame - visible_start_frame < visible_frames - 1:
             if visible_start_frame == 0:
                 visible_end_frame = min(
@@ -1695,12 +1695,12 @@ class VideoSplitterApp(ctk.CTk):
                     0, visible_end_frame - visible_frames
                 )
 
-        # seekbarの値域を表示範囲に設定
+        # Set seekbar range to visible range
         self.seek_slider.configure(
             from_=visible_start_frame, to=visible_end_frame
         )
 
-        # 現在フレームをスライダーに反映
+        # Reflect current frame on slider
         self.seek_slider.set(self.current_frame)
 
     def seek_layer_button_click(self, layer):
