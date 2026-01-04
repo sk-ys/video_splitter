@@ -892,9 +892,9 @@ class VideoSplitterApp(ctk.CTk):
         # Frame navigation buttons
         self.prev_frame_button = ctk.CTkButton(
             parent,
-            text=f"◀ 1F",
+            text=f"◀",
             command=lambda: None,
-            width=60,
+            width=30,
             state="disabled",
         )
         self.prev_frame_button.grid(row=0, column=1, padx=5, pady=5)
@@ -907,9 +907,9 @@ class VideoSplitterApp(ctk.CTk):
 
         self.next_frame_button = ctk.CTkButton(
             parent,
-            text=f"1F ▶",
+            text=f"▶",
             command=lambda: None,
-            width=60,
+            width=30,
             state="disabled",
         )
         self.next_frame_button.grid(row=0, column=2, padx=5, pady=5)
@@ -1451,6 +1451,8 @@ class VideoSplitterApp(ctk.CTk):
         self.prev_frame_click_count += 1
         if self.prev_frame_click_count > 1000000:
             self.prev_frame_click_count = 0
+        if self.vp is None:
+            return
         prev_frame_click = self.prev_frame_click_count
         self.prev_frame_auto_repeat = True
 
@@ -1471,6 +1473,8 @@ class VideoSplitterApp(ctk.CTk):
         self.next_frame_click_count += 1
         if self.next_frame_click_count > 1000000:
             self.next_frame_click_count = 0
+        if self.vp is None:
+            return
         next_frame_click = self.next_frame_click_count
         self.next_frame_auto_repeat = True
 
