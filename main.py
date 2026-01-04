@@ -1507,7 +1507,8 @@ class VideoSplitterApp(ctk.CTk):
             self.update_seekbar_slider_value()
             self.update_time_label()
             self.draw_all_segment_ranges()
-            self.after(round(1000 / self.vp.fps))
+            # TODO: Use more precise timing control. Temporary disabled for now.
+            # self.after(round(1000 / self.vp.fps))
 
         if self.current_frame >= self.vp.total_frames - 1:
             self.pause_video()
