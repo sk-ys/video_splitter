@@ -748,29 +748,29 @@ class VideoSplitterApp(ctk.CTk):
         self.seekbar_frame.bind("<Configure>", self.seekbar_resize_event)
 
         # Zoom control
-        self.zoom_range_control_frame = ctk.CTkFrame(self.seekbar_frame)
-        self.zoom_range_control_frame.grid(
+        self.zoom_scale_control_frame = ctk.CTkFrame(self.seekbar_frame)
+        self.zoom_scale_control_frame.grid(
             row=0, column=0, columnspan=3, padx=5, pady=5, sticky="w"
         )
         ctk.CTkLabel(
-            self.zoom_range_control_frame, text=f"{t("Range")}:"
+            self.zoom_scale_control_frame, text=f"{t("Range")}:"
         ).grid(row=0, column=0, padx=5)
-        self.zoom_range_slider = ctk.CTkSlider(
-            self.zoom_range_control_frame,
+        self.zoom_scale_slider = ctk.CTkSlider(
+            self.zoom_scale_control_frame,
             from_=1,
             to=100,
             number_of_steps=99,
-            command=self.update_zoom_range_slider,
+            command=self.update_zoom_scale_slider,
             state="disabled",
             width=150,
         )
-        self.zoom_range_slider.set(100)
-        self.zoom_range_slider.grid(row=0, column=1, padx=5)
+        self.zoom_scale_slider.set(100)
+        self.zoom_scale_slider.grid(row=0, column=1, padx=5)
 
-        self.zoom_range_label = ctk.CTkLabel(
-            self.zoom_range_control_frame, text="100%"
+        self.zoom_scale_label = ctk.CTkLabel(
+            self.zoom_scale_control_frame, text="100%"
         )
-        self.zoom_range_label.grid(row=0, column=2, padx=5)
+        self.zoom_scale_label.grid(row=0, column=2, padx=5)
 
         # Canvas for seekbar (for range display)
         self.seek_canvases_frame = ctk.CTkFrame(self.seekbar_frame)
@@ -822,8 +822,7 @@ class VideoSplitterApp(ctk.CTk):
         self.control_frame.grid_columnconfigure(1, weight=1)
 
         # Zoom-related variables
-        self.zoom_range = 100  # percent
-        self.zoom_center_frame = 0  # center frame for zoom
+        self.zoom_scale = 100  # percent
 
         # Split point setting buttons
         self.split_control_frame = ctk.CTkFrame(self.left_frame)
@@ -1313,7 +1312,7 @@ class VideoSplitterApp(ctk.CTk):
 
     def reset_video_controls(self):
         self.seek_slider.configure(to=self.vp.total_frames - 1, state="normal")
-        self.zoom_range_slider.configure(state="normal")
+        self.zoom_scale_slider.configure(state="normal")
         self.play_button.configure(state="normal")
         self.prev_frame_button.configure(state="normal")
         self.next_frame_button.configure(state="normal")
@@ -1324,7 +1323,6 @@ class VideoSplitterApp(ctk.CTk):
         self.snapshot_button.configure(state="normal")
 
         self.current_frame = 0
-        self.zoom_center_frame = 0
         self.update_zoom_range()
         self.update_frame()
         self.update_time_label()
@@ -1620,11 +1618,11 @@ class VideoSplitterApp(ctk.CTk):
     def on_seek_end(self, event):
         self.is_seeking = False
 
-    def update_zoom_range_slider(self, value):
-        self.zoom_range = float(value)
-        self.zoom_range_label.configure(text=f"{round(self.zoom_range)}%")
-        self.zoom_center_frame = self.current_frame
+    def update_zoom_scale_slider(self, value):
+        self.zoom_scale = float(value)
+        self.zoom_scale_label.configure(text=f"{round(self.zoom_scale)}%")
         self.update_zoom_range()
+        self.update_seekbar_slider_value()
         self.update_seekbar_time_labels()
         self.draw_all_segment_ranges()
 
@@ -1669,7 +1667,7 @@ class VideoSplitterApp(ctk.CTk):
         if self.vp is None or self.vp.total_frames == 0:
             return
 
-        visible_frames = round(self.vp.total_frames * (self.zoom_range / 100))
+        visible_frames = round(self.vp.total_frames * (self.zoom_scale / 100))
 
         if center_frame is None:
             center_frame = self.seek_slider.cget("from_") + round(
