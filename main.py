@@ -983,12 +983,21 @@ class VideoSplitterApp(ctk.CTk):
 
         self.prev_section_button = ctk.CTkButton(
             parent,
-            text="⏪",
+            text="⏮️",
             command=self.goto_prev_section,
             width=30,
             state="disabled",
         )
         self.prev_section_button.grid(row=0, column=1, padx=(5, 1), pady=5)
+
+        self.rewind_10sec_button = ctk.CTkButton(
+            parent,
+            text="⏪10s",
+            command=self.rewind_10sec,
+            width=60,
+            state="disabled",
+        )
+        self.rewind_10sec_button.grid(row=0, column=2, padx=1, pady=5)
 
         # Frame navigation buttons
         self.prev_frame_button = ctk.CTkButton(
@@ -998,7 +1007,7 @@ class VideoSplitterApp(ctk.CTk):
             width=30,
             state="disabled",
         )
-        self.prev_frame_button.grid(row=0, column=2, padx=1, pady=5)
+        self.prev_frame_button.grid(row=0, column=3, padx=1, pady=5)
         self.prev_frame_button.bind(
             "<Button-1>", self.on_prev_frame_button_press
         )
@@ -1013,7 +1022,7 @@ class VideoSplitterApp(ctk.CTk):
             width=30,
             state="disabled",
         )
-        self.next_frame_button.grid(row=0, column=3, padx=1, pady=5)
+        self.next_frame_button.grid(row=0, column=4, padx=1, pady=5)
         self.next_frame_button.bind(
             "<Button-1>", self.on_next_frame_button_press
         )
@@ -1021,14 +1030,23 @@ class VideoSplitterApp(ctk.CTk):
             "<ButtonRelease-1>", self.on_next_frame_button_release
         )
 
+        self.fast_forward_10sec_button = ctk.CTkButton(
+            parent,
+            text="10s⏩",
+            command=self.fast_forward_10sec,
+            width=60,
+            state="disabled",
+        )
+        self.fast_forward_10sec_button.grid(row=0, column=5, padx=1, pady=5)
+
         self.next_section_button = ctk.CTkButton(
             parent,
-            text="⏩",
+            text="⏭️",
             command=self.goto_next_section,
             width=30,
             state="disabled",
         )
-        self.next_section_button.grid(row=0, column=4, padx=(1, 5), pady=5)
+        self.next_section_button.grid(row=0, column=6, padx=(1, 5), pady=5)
 
         self.jump_to_time_button = ctk.CTkButton(
             parent,
@@ -1037,7 +1055,7 @@ class VideoSplitterApp(ctk.CTk):
             width=30,
             state="disabled",
         )
-        self.jump_to_time_button.grid(row=0, column=5, padx=5, pady=5)
+        self.jump_to_time_button.grid(row=0, column=7, padx=5, pady=5)
 
         self.snapshot_button = ctk.CTkButton(
             parent,
@@ -1046,7 +1064,7 @@ class VideoSplitterApp(ctk.CTk):
             width=30,
             state="disabled",
         )
-        self.snapshot_button.grid(row=0, column=6, padx=5, pady=5)
+        self.snapshot_button.grid(row=0, column=8, padx=5, pady=5)
 
     def setup_seekbar_canvases_ui(self, parent):
         self.seek_canvases = []
@@ -1428,6 +1446,8 @@ class VideoSplitterApp(ctk.CTk):
         self.next_frame_button.configure(state="normal")
         self.prev_section_button.configure(state="normal")
         self.next_section_button.configure(state="normal")
+        self.rewind_10sec_button.configure(state="normal")
+        self.fast_forward_10sec_button.configure(state="normal")
         self.jump_to_time_button.configure(state="normal")
         self.start_button.configure(state="normal")
         self.end_button.configure(state="normal")
@@ -1712,6 +1732,20 @@ class VideoSplitterApp(ctk.CTk):
                 if prev_segment.end_frame < self.current_frame
                 else prev_segment.start_frame
             )
+
+    def rewind_10sec(self):
+        if self.vp is None:
+            return
+
+        target_frame = self.current_frame - round(10 * self.vp.fps)
+        self.jump_to_frame(target_frame)
+
+    def fast_forward_10sec(self):
+        if self.vp is None:
+            return
+
+        target_frame = self.current_frame + round(10 * self.vp.fps)
+        self.jump_to_frame(target_frame)
 
     def jump_to_frame(self, frame_num):
         self.current_frame = max(0, min(frame_num, self.vp.total_frames - 1))
