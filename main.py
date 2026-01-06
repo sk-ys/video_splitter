@@ -762,7 +762,7 @@ class VideoSplitterApp(ctk.CTk):
             self.clear_seekbar_canvases_ui()
             self.setup_seekbar_canvases_ui(self.seek_canvases_frame)
             self.update_seekbar_time_labels()
-            self.update_segment_list_display()
+            self.refresh_all_segments_in_list()
             self.change_layer(str(self.selected_layer))
 
     def set_cache_size(self, size):
@@ -1344,7 +1344,7 @@ class VideoSplitterApp(ctk.CTk):
         self.show_full_list = ctk.CTkCheckBox(
             self.right_frame,
             text=t("Full"),
-            command=self.update_segment_list_display,
+            command=self.refresh_all_segments_in_list,
         )
         self.show_full_list.grid(
             row=0, column=0, padx=(90, 10), pady=5, sticky="w"
@@ -1496,7 +1496,7 @@ class VideoSplitterApp(ctk.CTk):
             return
 
         self.vp.segments.sort_segments_by_title()
-        self.update_segment_list_display()
+        self.refresh_all_segments_in_list()
         self.status_text.info(t("Segment list sorted by title."))
 
     def sort_list_by_start(self):
@@ -1504,7 +1504,7 @@ class VideoSplitterApp(ctk.CTk):
             return
 
         self.vp.segments.sort_segments_by_start_time()
-        self.update_segment_list_display()
+        self.refresh_all_segments_in_list()
         self.status_text.info(t("Segment list sorted by start time."))
 
     def seekbar_resize_event(self, event):
@@ -1524,7 +1524,7 @@ class VideoSplitterApp(ctk.CTk):
                 self.vp = VideoProject(file_path)
                 self.preload_head_frames()
                 self.reset_video_controls()
-                self.update_segment_list_display()
+                self.refresh_all_segments_in_list()
             except Exception as e:
                 messagebox.showerror(
                     t("Error"), t("Failed to load video file." + "\n" + str(e))
@@ -2127,7 +2127,7 @@ class VideoSplitterApp(ctk.CTk):
         self.selected_layer = int(layer_str)
         self.layer_label.configure(text=f"{t('layer')}: {self.selected_layer}")
         if update_segment_list:
-            self.update_segment_list_display()
+            self.refresh_all_segments_in_list()
         for layer in self.layers:
             self.draw_segment_ranges(
                 layer=layer, draw_current=layer == self.selected_layer
@@ -2514,7 +2514,7 @@ class VideoSplitterApp(ctk.CTk):
         else:
             self.status_text.info(t("Segment added"))
 
-        self.update_segment_list_display()
+        self.append_segment_to_segment_list(self.vp.segments.items[-1])
 
         # Reset start point button
         self.reset_start_point()
@@ -2600,7 +2600,7 @@ class VideoSplitterApp(ctk.CTk):
 
         self.update_length_label(False)
 
-    def update_segment_list_display(self):
+    def refresh_all_segments_in_list(self):
         # Clear existing list
         for widget in self.list_container.winfo_children():
             widget.destroy()
@@ -2624,109 +2624,137 @@ class VideoSplitterApp(ctk.CTk):
             ],
             key=lambda x: x.segment_id,
         )
-        for i, segment in enumerate(segment_list):
-            row_frame = ctk.CTkFrame(self.list_container)
-            row_frame.grid(row=i, column=0, sticky="ew", pady=2)
-            id = segment.segment_id
-            layer = segment.layer
-            is_selected = id == self.selected_segment_id
+        for segment in segment_list:
+            self.append_segment_to_segment_list(segment)
 
-            # Number button (jump to start position on click)
-            num_btn = ctk.CTkButton(
-                row_frame,
-                text=str(id),
-                width=30,
-                command=lambda _id=id: self.select_segment_id_with_jump(_id),
-                fg_color="#1F6AA5" if is_selected else "gray30",
-                hover_color="gray40",
-            )
-            num_btn.grid(row=0, column=0, padx=2)
+    def append_segment_to_segment_list(self, segment):
+        row_frame = ctk.CTkFrame(self.list_container)
+        row_frame.grid(
+            row=len(self.list_container.winfo_children()),
+            column=0,
+            sticky="ew",
+            pady=2,
+        )
+        self.update_segment_in_segment_list(row_frame, segment)
 
-            # layer label
-            ctk.CTkLabel(row_frame, text=str(layer), width=30).grid(
-                row=0, column=1, padx=2
-            )
+    def update_segment_in_segment_list(self, row_frame, segment):
+        segment_id = segment.segment_id
+        layer = segment.layer
+        is_selected = segment_id == self.selected_segment_id
 
-            # Title (editable)
-            title_entry = ctk.CTkEntry(row_frame)
-            title_entry.insert(0, segment.title)
-            title_entry.grid(row=0, column=2, padx=2, sticky="ew")
-            title_entry.bind(
-                "<FocusOut>",
-                lambda e, _id=id, entry=title_entry: self.update_segment_title(
-                    _id, entry.get()
-                ),
-            )
-            title_entry.bind(
-                "<Return>",
-                lambda e, _id=id, entry=title_entry: self.update_segment_title(
-                    _id, entry.get()
-                ),
-            )
+        # Number button (jump to start position on click)
+        num_btn = ctk.CTkButton(
+            row_frame,
+            text=str(segment_id),
+            width=30,
+            command=lambda _id=segment_id: self.select_segment_id_with_jump(
+                _id
+            ),
+            fg_color="#1F6AA5" if is_selected else "gray30",
+            hover_color="gray40",
+        )
+        num_btn.grid(row=0, column=0, padx=2)
 
-            # Start time (editable)
-            start_entry = ctk.CTkEntry(row_frame, width=90)
-            start_entry.insert(0, utils.format_time(segment.start_time))
-            start_entry.grid(row=0, column=3, padx=2)
-            start_entry.bind(
-                "<FocusOut>",
-                lambda e, _id=id, entry=start_entry: self.update_segment_time(
-                    _id, "start", entry.get()
-                ),
-            )
-            start_entry.bind(
-                "<Return>",
-                lambda e, _id=id, entry=start_entry: self.update_segment_time(
-                    _id, "start", entry.get()
-                ),
-            )
+        # layer label
+        ctk.CTkLabel(row_frame, text=str(layer), width=30).grid(
+            row=0, column=1, padx=2
+        )
 
-            # End time (editable)
-            end_entry = ctk.CTkEntry(row_frame, width=90)
-            end_entry.insert(0, utils.format_time(segment.end_time))
-            end_entry.grid(row=0, column=4, padx=2)
-            end_entry.bind(
-                "<FocusOut>",
-                lambda e, _id=id, entry=end_entry: self.update_segment_time(
-                    _id, "end", entry.get()
-                ),
-            )
-            end_entry.bind(
-                "<Return>",
-                lambda e, _id=id, entry=end_entry: self.update_segment_time(
-                    _id, "end", entry.get()
-                ),
-            )
+        # Title (editable)
+        title_entry = ctk.CTkEntry(row_frame)
+        title_entry.insert(0, segment.title)
+        title_entry.grid(row=0, column=2, padx=2, sticky="ew")
+        title_entry.bind(
+            "<FocusOut>",
+            lambda e, _id=segment_id, entry=title_entry: self.update_segment_title(
+                _id, entry.get()
+            ),
+        )
+        title_entry.bind(
+            "<Return>",
+            lambda e, _id=segment_id, entry=title_entry: self.update_segment_title(
+                _id, entry.get()
+            ),
+        )
 
-            # Duration (auto-calculated)
-            ctk.CTkLabel(
-                row_frame,
-                text=utils.format_time(segment.duration),
-                width=80,
-            ).grid(row=0, column=5, padx=2)
+        # Start time (editable)
+        start_entry = ctk.CTkEntry(row_frame, width=90)
+        start_entry.insert(0, utils.format_time(segment.start_time))
+        start_entry.grid(row=0, column=3, padx=2)
+        start_entry.bind(
+            "<FocusOut>",
+            lambda e, _id=segment_id, entry=start_entry: self.update_segment_time(
+                _id, "start", entry.get()
+            ),
+        )
+        start_entry.bind(
+            "<Return>",
+            lambda e, _id=segment_id, entry=start_entry: self.update_segment_time(
+                _id, "start", entry.get()
+            ),
+        )
 
-            # Delete button
-            delete_btn = ctk.CTkButton(
-                row_frame,
-                text="×",
-                width=30,
-                command=lambda _id=id: self.delete_segment(_id),
-                fg_color="transparent",
-                hover_color="darkred",
-                border_color="darkred",
-                border_width=1,
-            )
-            delete_btn.grid(row=0, column=6, padx=2)
+        # End time (editable)
+        end_entry = ctk.CTkEntry(row_frame, width=90)
+        end_entry.insert(0, utils.format_time(segment.end_time))
+        end_entry.grid(row=0, column=4, padx=2)
+        end_entry.bind(
+            "<FocusOut>",
+            lambda e, _id=segment_id, entry=end_entry: self.update_segment_time(
+                _id, "end", entry.get()
+            ),
+        )
+        end_entry.bind(
+            "<Return>",
+            lambda e, _id=segment_id, entry=end_entry: self.update_segment_time(
+                _id, "end", entry.get()
+            ),
+        )
 
-            row_frame.grid_columnconfigure(2, weight=1)
+        # Duration (auto-calculated)
+        ctk.CTkLabel(
+            row_frame,
+            text=utils.format_time(segment.duration),
+            width=80,
+        ).grid(row=0, column=5, padx=2)
 
-            segment.ui = {
-                "frame": row_frame,
-                "num_btn": num_btn,
-                "title_entry": title_entry,
-                "start_entry": start_entry,
-                "end_entry": end_entry,
-            }
+        # Delete button
+        delete_btn = ctk.CTkButton(
+            row_frame,
+            text="×",
+            width=30,
+            command=lambda _id=segment_id: self.delete_segment(_id),
+            fg_color="transparent",
+            hover_color="darkred",
+            border_color="darkred",
+            border_width=1,
+        )
+        delete_btn.grid(row=0, column=6, padx=2)
+
+        row_frame.grid_columnconfigure(2, weight=1)
+
+        segment.ui = {
+            "frame": row_frame,
+            "num_btn": num_btn,
+            "title_entry": title_entry,
+            "start_entry": start_entry,
+            "end_entry": end_entry,
+        }
+
+    def refresh_segment_in_list(self, segment):
+        ui = segment.ui
+        if ui is None:
+            raise Exception("No UI found for segment")
+
+        frame = ui["frame"]
+        if not frame.winfo_exists():
+            raise Exception("Segment UI frame does not exist")
+
+        # Clear all ui inner frame
+        for widget in frame.winfo_children():
+            widget.destroy()
+
+        self.update_segment_in_segment_list(frame, segment)
 
     def update_segment_title(self, id, title):
         """Update title"""
@@ -2735,7 +2763,10 @@ class VideoSplitterApp(ctk.CTk):
             # Remove characters not allowed in filenames
             safe_title = re.sub(r'[\\/:*?"<>|]', "", title.strip())
             segment.title = safe_title
-            self.update_segment_list_display()
+            try:
+                self.refresh_segment_in_list(segment)
+            except:
+                self.refresh_all_segments_in_list()
 
     def jump_to_segment(self, id: int, position: str | None = None):
         """Jump to the start or end position of the specified segment.
@@ -2832,7 +2863,10 @@ class VideoSplitterApp(ctk.CTk):
                     messagebox.showwarning(
                         t("Warning"), t("Start time must be before end time")
                     )
-                    self.update_segment_list_display()
+                    try:
+                        self.refresh_segment_in_list(segment)
+                    except:
+                        self.refresh_all_segments_in_list()
                     return
                 segment.start_time = total_seconds
             else:  # end
@@ -2840,12 +2874,18 @@ class VideoSplitterApp(ctk.CTk):
                     messagebox.showwarning(
                         t("Warning"), t("End time must be after start time")
                     )
-                    self.update_segment_list_display()
+                    try:
+                        self.refresh_segment_in_list(segment)
+                    except:
+                        self.refresh_all_segments_in_list()
                     return
                 segment.end_time = total_seconds
 
             # Update display
-            self.update_segment_list_display()
+            try:
+                self.refresh_segment_in_list(segment)
+            except:
+                self.refresh_all_segments_in_list()
             self.draw_segment_ranges(segment.layer)
 
         except (ValueError, IndexError):
@@ -2853,7 +2893,10 @@ class VideoSplitterApp(ctk.CTk):
                 t("Warning"),
                 t("Time format is incorrect. Format: mm:ss.mmm or mm:ss"),
             )
-            self.update_segment_list_display()
+            try:
+                self.refresh_segment_in_list(segment)
+            except:
+                self.refresh_all_segments_in_list()
 
     def delete_segment(self, id):
         segment = self.vp.segments.get_segment_by_id(id)
@@ -2861,7 +2904,7 @@ class VideoSplitterApp(ctk.CTk):
             print("Segment ID not found")
             return
         self.vp.segments.remove_segment_by_id(id)
-        self.update_segment_list_display()
+        self.refresh_all_segments_in_list()
         layer = segment.layer
 
         if self.selected_segment_id == id:
@@ -2899,7 +2942,7 @@ class VideoSplitterApp(ctk.CTk):
                     hover_color=["#36719F", "#144870"],
                 )
 
-                self.update_segment_list_display()
+                self.refresh_all_segments_in_list()
                 for layer in layers:
                     self.draw_segment_ranges(layer)
                 self.execute_split_multiple_button.configure(state="disabled")
@@ -2916,7 +2959,7 @@ class VideoSplitterApp(ctk.CTk):
             ):
                 self.change_mode("Add", False)
                 self.vp.segments.reset_indices()
-                self.update_segment_list_display()
+                self.refresh_all_segments_in_list()
                 self.status_text.info(t("Segment IDs reset"))
 
     def select_output_folder(self):
@@ -3120,7 +3163,7 @@ class VideoSplitterApp(ctk.CTk):
             self.reset_video_controls()
 
             # Restore segment list
-            self.update_segment_list_display()
+            self.refresh_all_segments_in_list()
             self.draw_all_segment_ranges()
 
             # Reset start point
