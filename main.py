@@ -1577,6 +1577,12 @@ class VideoSplitterApp(ctk.CTk):
                     # self.vp.cap.set(
                     #     cv2.CAP_PROP_POS_FRAMES, self.current_frame
                     # )
+                    self.status_text.warning(
+                        t(
+                            "Frame seek failed. "
+                            + "If problems persist, please reload the video."
+                        )
+                    )
             ret, frame = self.vp.cap.read()
 
             if ret:
