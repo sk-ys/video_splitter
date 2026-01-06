@@ -369,6 +369,14 @@ class SegmentManager:
         # Return sorted list
         return sorted(filtered_segment_list, key=lambda x: x.start_time)
 
+    def sort_segments_by_title(self):
+        """Sort segments by their title"""
+        self.items.sort(key=lambda segment: segment.title)
+
+    def sort_segments_by_start_time(self):
+        """Sort segments by their start time"""
+        self.items.sort(key=lambda segment: segment.start_time)
+
 
 class VideoProject:
     def __init__(self, video_path, output_path=None):
@@ -1413,12 +1421,15 @@ class VideoSplitterApp(ctk.CTk):
         ctk.CTkLabel(self.header_frame, text=t("L"), width=30).grid(
             row=0, column=1, padx=2
         )
-        ctk.CTkLabel(self.header_frame, text=t("Title")).grid(
-            row=0, column=2, padx=2
-        )
-        ctk.CTkLabel(self.header_frame, text=t("Start"), width=90).grid(
-            row=0, column=3, padx=2
-        )
+        ctk.CTkButton(
+            self.header_frame, text=t("Title"), command=self.sort_list_by_title
+        ).grid(row=0, column=2, padx=2)
+        ctk.CTkButton(
+            self.header_frame,
+            text=t("Start"),
+            width=90,
+            command=self.sort_list_by_start,
+        ).grid(row=0, column=3, padx=2)
         ctk.CTkLabel(self.header_frame, text=t("End"), width=90).grid(
             row=0, column=4, padx=2
         )
@@ -1436,6 +1447,22 @@ class VideoSplitterApp(ctk.CTk):
         self.list_container.grid(row=1, column=0, sticky="ew")
 
         self.list_container.grid_columnconfigure(0, weight=1)
+
+    def sort_list_by_title(self):
+        if self.vp is None:
+            return
+
+        self.vp.segments.sort_segments_by_title()
+        self.update_segment_list_display()
+        self.status_text.info(t("Segment list sorted by title."))
+
+    def sort_list_by_start(self):
+        if self.vp is None:
+            return
+
+        self.vp.segments.sort_segments_by_start_time()
+        self.update_segment_list_display()
+        self.status_text.info(t("Segment list sorted by start time."))
 
     def seekbar_resize_event(self, event):
         self.after(10, self.draw_all_segment_ranges)

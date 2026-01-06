@@ -130,6 +130,8 @@ translations = {
         "Video encoder codec": "Video encoder codec",
         "Video backend (if available)": "Video backend (if available)",
         "Video backend changed. New backend applies on next video load.": "Video backend changed. New backend applies on next video load.",
+        "Segment list sorted by title.": "Segment list sorted by title.",
+        "Segment list sorted by start time.": "Segment list sorted by start time.",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -256,5 +258,7 @@ translations = {
         "Video encoder codec": "動画エンコーダーのコーデック",
         "Video backend (if available)": "動画バックエンド（利用可能な場合）",
         "Video backend changed. New backend applies on next video load.": "動画バックエンドが変更されました。次回の動画読み込み時に新しいバックエンドが適用されます。",
+        "Segment list sorted by title.": "Segment list sorted by title.",
+        "Segment list sorted by start time.": "Segment list sorted by start time.",
     },
 }
