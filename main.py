@@ -730,6 +730,24 @@ class VideoSplitterApp(ctk.CTk):
         self.next_frame_click_count = 0
         self.next_frame_auto_repeat = False
         self.auto_repeat_interval_ms = 300  # Initial delay before auto-repeat
+        self.zoom_scale_list = [
+            1,
+            2,
+            3,
+            5,
+            10,
+            15,
+            20,
+            25,
+            30,
+            40,
+            50,
+            60,
+            70,
+            80,
+            90,
+            100,
+        ]
         self.setup_ui()
 
         self.change_layer(self.selected_layer)
@@ -859,24 +877,31 @@ class VideoSplitterApp(ctk.CTk):
             row=0, column=0, columnspan=3, padx=5, pady=5, sticky="w"
         )
         ctk.CTkLabel(
+            self.zoom_scale_control_frame, text=f"{t("Scale")}: "
+        ).grid(row=0, column=0, padx=(5, 2))
+        self.zoom_scale_selector = ctk.CTkOptionMenu(
+            self.zoom_scale_control_frame,
+            values=[str(z) + "%" for z in self.zoom_scale_list],
+            width=70,
+            command=self.on_zoom_scale_selector_change,
+            state="disabled",
+        )
+        self.zoom_scale_selector.grid(row=0, column=1, padx=(2, 5))
+        self.zoom_scale_selector.set(f"{self.zoom_scale_list[-1]}%")
+
+        ctk.CTkLabel(
             self.zoom_scale_control_frame, text=f"{t("Range")}:"
-        ).grid(row=0, column=0, padx=5)
-        self.zoom_scale_slider = ctk.CTkSlider(
+        ).grid(row=0, column=2, padx=5)
+        self.zoom_range_slider = ctk.CTkSlider(
             self.zoom_scale_control_frame,
             from_=1,
             to=100,
-            number_of_steps=99,
-            command=self.update_zoom_scale_slider,
+            command=self.on_zoom_range_slider_update,
             state="disabled",
             width=150,
         )
-        self.zoom_scale_slider.set(100)
-        self.zoom_scale_slider.grid(row=0, column=1, padx=5)
-
-        self.zoom_scale_label = ctk.CTkLabel(
-            self.zoom_scale_control_frame, text="100%"
-        )
-        self.zoom_scale_label.grid(row=0, column=2, padx=5)
+        self.zoom_range_slider.set(50)
+        self.zoom_range_slider.grid(row=0, column=3, padx=5)
 
         # Canvas for seekbar (for range display)
         self.seek_canvases_frame = ctk.CTkFrame(self.seekbar_frame)
@@ -928,7 +953,7 @@ class VideoSplitterApp(ctk.CTk):
         self.control_frame.grid_columnconfigure(1, weight=1)
 
         # Zoom-related variables
-        self.zoom_scale = 100  # percent
+        self.update_zoom_scale(self.zoom_scale_list[-1])
 
         # Split point setting buttons
         self.split_control_frame = ctk.CTkFrame(self.left_frame)
@@ -1507,7 +1532,8 @@ class VideoSplitterApp(ctk.CTk):
 
     def reset_video_controls(self):
         self.seek_slider.configure(to=self.vp.total_frames - 1, state="normal")
-        self.zoom_scale_slider.configure(state="normal")
+        self.zoom_scale_selector.configure(state="normal")
+        self.zoom_range_slider.configure(state="normal")
         self.play_button.configure(state="normal")
         self.prev_frame_button.configure(state="normal")
         self.next_frame_button.configure(state="normal")
@@ -1522,6 +1548,7 @@ class VideoSplitterApp(ctk.CTk):
         self.snapshot_button.configure(state="normal")
 
         self.current_frame = 0
+        self.update_zoom_range_slider()
         self.update_zoom_range()
         self.update_frame()
         self.update_time_label()
@@ -1937,13 +1964,57 @@ class VideoSplitterApp(ctk.CTk):
     def on_seek_end(self, event):
         self.is_seeking = False
 
-    def update_zoom_scale_slider(self, value):
-        self.zoom_scale = float(value)
-        self.zoom_scale_label.configure(text=f"{round(self.zoom_scale)}%")
+    def zoom_scale(self):
+        return int(self.zoom_scale_selector.get().rstrip("%"))
+
+    def update_zoom_scale(self, value):
+        if self.zoom_scale() != value:
+            self.zoom_scale_selector.set(f"{round(int(value))}%")
+        self.update_zoom_range_slider()
         self.update_zoom_range()
         self.update_seekbar_slider_value()
         self.update_seekbar_time_labels()
         self.draw_all_segment_ranges()
+
+    def on_zoom_scale_selector_change(self, value):
+        self.update_zoom_scale(int(value.rstrip("%")))
+
+    def on_zoom_range_slider_update(self, value):
+        """Update zoom range based on slider value"""
+        self.update_zoom_range(center_frame=round(value))
+        self.update_seekbar_slider_value(adjust_zoom_range=False)
+        self.update_seekbar_time_labels()
+        self.draw_all_segment_ranges()
+
+    def update_zoom_range_slider(self):
+        if self.vp is None:
+            return
+
+        zoom_scale = self.zoom_scale()
+
+        if zoom_scale == 100:
+            self.zoom_range_slider.configure(
+                from_=0, to=2, number_of_steps=2, state="disabled"
+            )
+            self.zoom_range_slider.set(1)
+            return
+
+        visible_frames = round(self.vp.total_frames * (zoom_scale / 100))
+        half_visible_frames = round(visible_frames / 2)
+        min_frame = half_visible_frames
+        max_frame = self.vp.total_frames - (
+            visible_frames - half_visible_frames
+        )
+        self.zoom_range_slider.configure(
+            from_=min_frame,
+            to=max_frame,
+            number_of_steps=self.vp.total_frames - visible_frames,
+            state="normal",
+        )
+
+        self.zoom_range_slider.set(
+            min(max_frame, max(min_frame, self.current_frame))
+        )
 
     def update_seekbar_time_labels(self):
         """Update seekbar display range time labels"""
@@ -1959,7 +2030,7 @@ class VideoSplitterApp(ctk.CTk):
         self.seekbar_start_label.configure(text=utils.format_time(start_time))
         self.seekbar_end_label.configure(text=utils.format_time(end_time))
 
-    def update_seekbar_slider_value(self):
+    def update_seekbar_slider_value(self, adjust_zoom_range=True):
         """Update seekbar slider value based on current frame"""
         if self.vp is None or self.vp.total_frames == 0:
             return
@@ -1969,24 +2040,29 @@ class VideoSplitterApp(ctk.CTk):
         slider_to = self.seek_slider.cget("to")
 
         # Adjust zoom range if current frame is out of range
-        if self.current_frame < slider_from or self.current_frame > slider_to:
+        if adjust_zoom_range and (
+            self.current_frame < slider_from or self.current_frame > slider_to
+        ):
             if self.current_frame < slider_from:
                 shift_frames = self.current_frame - slider_from
             else:
                 shift_frames = self.current_frame - slider_to
 
             self.update_zoom_range(shift_frames=shift_frames)
+            self.update_zoom_range_slider()
             self.update_seekbar_time_labels()
 
         # Update slider value
         self.seek_slider.set(self.current_frame)
 
-    def update_zoom_range(self, shift_frames=0):
+    def update_zoom_range(self, center_frame=None, shift_frames=0):
         """Update seek slider range based on zoom"""
         if self.vp is None or self.vp.total_frames == 0:
             return
 
-        visible_frames = round(self.vp.total_frames * (self.zoom_scale / 100))
+        visible_frames = round(
+            self.vp.total_frames * (self.zoom_scale() / 100)
+        )
 
         current_start = self.seek_slider.cget("from_")
         current_end = self.seek_slider.cget("to")
@@ -1996,16 +2072,25 @@ class VideoSplitterApp(ctk.CTk):
             self.current_frame - current_start
         ) / current_visible_frames
 
-        visible_start_frame = max(
-            0,
-            self.current_frame
-            - round(visible_frames * relative_slider_position)
-            + shift_frames,
-        )
-        visible_end_frame = min(
-            self.vp.total_frames - 1 + shift_frames,
-            visible_start_frame + visible_frames,
-        )
+        if center_frame is not None:
+            visible_start_frame = max(
+                0, center_frame - round(visible_frames / 2)
+            )
+            visible_end_frame = min(
+                self.vp.total_frames - 1,
+                visible_start_frame + visible_frames,
+            )
+        else:
+            visible_start_frame = max(
+                0,
+                self.current_frame
+                - round(visible_frames * relative_slider_position)
+                + shift_frames,
+            )
+            visible_end_frame = min(
+                self.vp.total_frames - 1 + shift_frames,
+                visible_start_frame + visible_frames,
+            )
 
         # Adjust start/end if range is smaller than expected
         if visible_end_frame - visible_start_frame < visible_frames - 1:

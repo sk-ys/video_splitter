@@ -136,6 +136,7 @@ translations = {
         "Reset segment IDs?": "Reset segment IDs?",
         "Reset IDs": "Reset IDs",
         "Frame seek failed. If problems persist, please reload the video.": "Frame seek failed. If problems persist, please reload the video.",
+        "Scale": "Scale",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -268,5 +269,6 @@ translations = {
         "Reset segment IDs?": "セグメントIDをリセットしますか？",
         "Reset IDs": "IDをリセット",
         "Frame seek failed. If problems persist, please reload the video.": "フレームのシークに失敗しました。問題が解決しない場合は、動画を再読み込みしてください。",
+        "Scale": "拡大率",
     },
 }
