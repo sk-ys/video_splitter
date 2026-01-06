@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+import re
 import tkinter as tk
 import customtkinter as ctk
 from ctk_widgets import CTkSpinbox
@@ -2566,7 +2567,7 @@ class VideoSplitterApp(ctk.CTk):
         segment = self.vp.segments.get_segment_by_id(id)
         if segment is not None:
             # Remove characters not allowed in filenames
-            safe_title = "".join(c for c in title if c.isalnum()).strip()
+            safe_title = re.sub(r'[\\/:*?"<>|]', "", title.strip())
             segment.title = safe_title
             self.update_segment_list_display()
 
