@@ -2791,7 +2791,7 @@ class VideoSplitterApp(ctk.CTk):
             )
             self.progress.set(1.0)
             self.progress_label.configure(text=t("Complete"))
-            messagebox.showinfo(t("Done"), t("Video segment completed"))
+            messagebox.showinfo(t("Done"), t("Video splitting completed"))
         except Exception as e:
             messagebox.showerror(
                 t("Error"), f"{t("Error occurred")}: {str(e)}"
