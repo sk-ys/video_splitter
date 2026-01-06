@@ -377,6 +377,11 @@ class SegmentManager:
         """Sort segments by their start time"""
         self.items.sort(key=lambda segment: segment.start_time)
 
+    def reset_indices(self):
+        """Reset segment IDs based on their order in the list"""
+        for index, segment in enumerate(self.items):
+            segment.segment_id = index + 1
+
 
 class VideoProject:
     def __init__(self, video_path, output_path=None):
@@ -1339,6 +1344,19 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.clear_button.grid(row=0, column=0, padx=10, pady=5, sticky="e")
 
+        # Reset index button
+        self.reset_index_button = ctk.CTkButton(
+            self.right_frame,
+            text=t("Reset IDs"),
+            command=self.reset_segment_indices,
+            fg_color="gray",
+            hover_color="darkgray",
+            width=80,
+        )
+        self.reset_index_button.grid(
+            row=0, column=0, padx=(10, 100), pady=5, sticky="e"
+        )
+
         # layer label
         self.layer_label = ctk.CTkLabel(
             self.right_frame,
@@ -1415,7 +1433,7 @@ class VideoSplitterApp(ctk.CTk):
         # Header
         self.header_frame = ctk.CTkFrame(parent)
         self.header_frame.grid(row=0, column=0, sticky="ew", pady=5)
-        ctk.CTkLabel(self.header_frame, text=t("No."), width=30).grid(
+        ctk.CTkLabel(self.header_frame, text=t("ID"), width=30).grid(
             row=0, column=0, padx=2
         )
         ctk.CTkLabel(self.header_frame, text=t("L"), width=30).grid(
@@ -2787,6 +2805,20 @@ class VideoSplitterApp(ctk.CTk):
                     self.draw_segment_ranges(layer)
                 self.execute_split_multiple_button.configure(state="disabled")
                 self.execute_split_single_button.configure(state="disabled")
+
+    def reset_segment_indices(self):
+        if self.vp is None:
+            return
+
+        if len(self.vp.segments) > 0:
+            if messagebox.askyesno(
+                t("Confirm"),
+                t("Reset segment IDs?"),
+            ):
+                self.change_mode("Add", False)
+                self.vp.segments.reset_indices()
+                self.update_segment_list_display()
+                self.status_text.info(t("Segment IDs reset"))
 
     def select_output_folder(self):
         folder = filedialog.askdirectory(title=t("Select output folder"))
