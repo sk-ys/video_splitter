@@ -1048,14 +1048,14 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.next_section_button.grid(row=0, column=6, padx=(1, 5), pady=5)
 
-        self.jump_to_time_button = ctk.CTkButton(
+        self.jump_to_button = ctk.CTkButton(
             parent,
             text="➡️",
-            command=self.jump_to_time_dialog,
+            command=self.jump_to_dialog,
             width=30,
             state="disabled",
         )
-        self.jump_to_time_button.grid(row=0, column=7, padx=5, pady=5)
+        self.jump_to_button.grid(row=0, column=7, padx=5, pady=5)
 
         self.snapshot_button = ctk.CTkButton(
             parent,
@@ -1448,7 +1448,7 @@ class VideoSplitterApp(ctk.CTk):
         self.next_section_button.configure(state="normal")
         self.rewind_10sec_button.configure(state="normal")
         self.fast_forward_10sec_button.configure(state="normal")
-        self.jump_to_time_button.configure(state="normal")
+        self.jump_to_button.configure(state="normal")
         self.start_button.configure(state="normal")
         self.end_button.configure(state="normal")
         self.mode_selector.configure(state="normal")
@@ -1759,22 +1759,33 @@ class VideoSplitterApp(ctk.CTk):
         frame_num = round(time_sec * self.vp.fps)
         self.jump_to_frame(frame_num)
 
-    def jump_to_time_dialog(self):
+    def jump_to_dialog(self):
+        current_time_str = utils.format_time(self.current_frame / self.vp.fps)
         dialog = CustomCTkInputDialog(
-            title=t("Jump to Time"),
-            text=t("Enter time (in seconds or mm:ss.sss format):"),
-            initialvalue=f"{utils.format_time(self.current_frame / self.vp.fps)}",
+            title=t("Jump to Time / Frame"),
+            text=t("Enter time (mm:ss.sss format) or frame number")
+            + ":\n"
+            + "( "
+            + t("Current")
+            + ": "
+            + f"{current_time_str} / {self.current_frame}"
+            + " )",
+            initialvalue=f"{current_time_str}",
         )
 
-        time_str = dialog.get_input()
+        ret = dialog.get_input()
 
-        if time_str:
-            try:
-                self.jump_to_time(utils.time_str_to_sec(time_str))
-            except ValueError:
-                messagebox.showerror(
-                    t("Error"), t("Invalid time format entered.")
-                )
+        if ret:
+            if ret.isdigit():
+                frame_num = int(ret)
+                self.jump_to_frame(frame_num)
+            else:
+                try:
+                    self.jump_to_time(utils.time_str_to_sec(ret))
+                except ValueError:
+                    messagebox.showerror(
+                        t("Error"), t("Invalid format entered.")
+                    )
 
     def take_snapshot(self):
         if self.vp is None:
