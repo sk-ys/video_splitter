@@ -1359,19 +1359,40 @@ class VideoSplitterApp(ctk.CTk):
         )
         self.output_button.grid(row=0, column=1, padx=5, pady=5)
 
+        self.execute_buttons_frame = ctk.CTkFrame(
+            self.right_frame, fg_color="transparent"
+        )
+        self.execute_buttons_frame.grid(
+            row=3, column=0, padx=10, pady=0, sticky="ew"
+        )
+
         # Execute button
-        self.execute_button = ctk.CTkButton(
-            self.right_frame,
-            text=t("Split Execute"),
-            command=self.execute_split,
+        self.execute_split_multiple_button = ctk.CTkButton(
+            self.execute_buttons_frame,
+            text=t("Split All Segments in List"),
+            command=self.execute_split_multiple,
             height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
             fg_color="green",
             hover_color="darkgreen",
             state="disabled",
         )
-        self.execute_button.grid(
-            row=3, column=0, padx=10, pady=20, sticky="ew"
+        self.execute_split_multiple_button.grid(
+            row=0, column=0, padx=10, pady=20, sticky="ew"
+        )
+
+        self.execute_split_single_button = ctk.CTkButton(
+            self.execute_buttons_frame,
+            text=t("Split Selected Segment"),
+            command=self.execute_split_single,
+            height=50,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            fg_color="green",
+            hover_color="darkgreen",
+            state="disabled",
+        )
+        self.execute_split_single_button.grid(
+            row=0, column=1, padx=10, pady=20, sticky="ew"
         )
 
         # Progress bar
@@ -2355,7 +2376,8 @@ class VideoSplitterApp(ctk.CTk):
         self.reset_start_point()
 
         if len(self.vp.segments) > 0:
-            self.execute_button.configure(state="normal")
+            self.execute_split_multiple_button.configure(state="normal")
+            self.execute_split_single_button.configure(state="normal")
 
     def edit_end_point(self, id=None):
         """Edit the end point to a specific time"""
@@ -2704,7 +2726,7 @@ class VideoSplitterApp(ctk.CTk):
         self.draw_segment_ranges(layer, layer == self.selected_layer)
 
         if len(self.vp.segments) == 0:
-            self.execute_button.configure(state="disabled")
+            self.execute_split_multiple_button.configure(state="disabled")
 
     def clear_list(self):
         if self.show_full_list.get():
@@ -2736,14 +2758,15 @@ class VideoSplitterApp(ctk.CTk):
                 self.update_segment_list_display()
                 for layer in layers:
                     self.draw_segment_ranges(layer)
-                self.execute_button.configure(state="disabled")
+                self.execute_split_multiple_button.configure(state="disabled")
+                self.execute_split_single_button.configure(state="disabled")
 
     def select_output_folder(self):
         folder = filedialog.askdirectory(title=t("Select output folder"))
         if folder:
             self.vp.output_path = folder
 
-    def execute_split(self, layers=None):
+    def execute_split_multiple(self, layers=None):
         if not self.vp.output_path:
             messagebox.showwarning(
                 t("Warning"), t("Output folder not selected")
@@ -2762,12 +2785,14 @@ class VideoSplitterApp(ctk.CTk):
             messagebox.showwarning(t("Warning"), t("No segment settings"))
             return
 
-        self.execute_button.configure(state="disabled")
+        self.execute_split_multiple_button.configure(state="disabled")
         threading.Thread(
-            target=self.split_video_thread, args=(layers,), daemon=True
+            target=self.split_multiple_video_thread,
+            args=(layers,),
+            daemon=True,
         ).start()
 
-    def split_video_thread(self, layers):
+    def split_multiple_video_thread(self, layers):
         if layers is None:
             layers = self.layers
 
@@ -2797,7 +2822,65 @@ class VideoSplitterApp(ctk.CTk):
                 t("Error"), f"{t("Error occurred")}: {str(e)}"
             )
         finally:
-            self.execute_button.configure(state="normal")
+            self.execute_split_multiple_button.configure(state="normal")
+
+    def execute_split_single(self):
+        if not self.vp.output_path:
+            messagebox.showwarning(
+                t("Warning"), t("Output folder not selected")
+            )
+            return
+
+        if self.vp is None or self.vp.total_frames == 0:
+            messagebox.showwarning(t("Warning"), t("No video loaded"))
+            return
+
+        segment = None
+        if self.selected_segment_id is not None:
+            segment = self.vp.segments.get_segment_by_id(
+                self.selected_segment_id
+            )
+
+        if segment is None:
+            segment = self.vp.segments.get_segment_by_time(
+                self.current_frame / self.vp.fps,
+            )
+
+        if segment is None:
+            messagebox.showwarning(t("Warning"), t("No segment selected"))
+            return
+
+        self.execute_split_single_button.configure(state="disabled")
+        threading.Thread(
+            target=self.split_single_video_thread, args=(segment,), daemon=True
+        ).start()
+
+    def split_single_video_thread(self, segment):
+        try:
+
+            def progress_callback(i, total):
+                self.progress_label.configure(
+                    text=f"{t("Progress")}: {i+1}/{total}"
+                )
+                self.progress.set(i / total if total else 0)
+
+            video_utils.split_video(
+                self.vp.video_path,
+                [segment],
+                self.vp.output_path,
+                progress_callback=progress_callback,
+                codec=config.get("DEFAULT", "codec"),
+                backend=config.get("DEFAULT", "backend"),
+            )
+            self.progress.set(1.0)
+            self.progress_label.configure(text=t("Complete"))
+            messagebox.showinfo(t("Done"), t("Video splitting completed"))
+        except Exception as e:
+            messagebox.showerror(
+                t("Error"), f"{t("Error occurred")}: {str(e)}"
+            )
+        finally:
+            self.execute_split_single_button.configure(state="normal")
 
     def start_resize(self, event):
         """Start resizing"""
@@ -2886,7 +2969,8 @@ class VideoSplitterApp(ctk.CTk):
             self.reset_start_point()
 
             if len(self.vp.segments) > 0:
-                self.execute_button.configure(state="normal")
+                self.execute_split_multiple_button.configure(state="normal")
+                self.execute_split_single_button.configure(state="normal")
 
             messagebox.showinfo(t("Done"), t("Project file loaded"))
 
