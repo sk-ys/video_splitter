@@ -1908,20 +1908,26 @@ class VideoSplitterApp(ctk.CTk):
         # Update slider value
         self.seek_slider.set(self.current_frame)
 
-    def update_zoom_range(self, center_frame=None, shift_frames=0):
+    def update_zoom_range(self, shift_frames=0):
         """Update seek slider range based on zoom"""
         if self.vp is None or self.vp.total_frames == 0:
             return
 
         visible_frames = round(self.vp.total_frames * (self.zoom_scale / 100))
 
-        if center_frame is None:
-            center_frame = self.seek_slider.cget("from_") + round(
-                visible_frames / 2
-            )
+        current_start = self.seek_slider.cget("from_")
+        current_end = self.seek_slider.cget("to")
+        current_visible_frames = current_end - current_start
+
+        relative_slider_position = (
+            self.current_frame - current_start
+        ) / current_visible_frames
 
         visible_start_frame = max(
-            0, center_frame - round(visible_frames / 2) + shift_frames
+            0,
+            self.current_frame
+            - round(visible_frames * relative_slider_position)
+            + shift_frames,
         )
         visible_end_frame = min(
             self.vp.total_frames - 1 + shift_frames,
