@@ -385,6 +385,7 @@ class SegmentManager:
 
 class VideoProject:
     def __init__(self, video_path, output_path=None):
+        self._file_path = None
         self.video_path = video_path
         self.output_path = output_path
         self.cap, self.total_frames, self.fps = video_utils.load_video(
@@ -407,6 +408,10 @@ class VideoProject:
     def duration(self):
         return self.total_frames / self.fps
 
+    @property
+    def file_path(self):
+        return self._file_path
+
     def save(self, file_path):
         project_data = {
             "video_path": self.video_path,
@@ -416,6 +421,9 @@ class VideoProject:
 
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(project_data, f, ensure_ascii=False, indent=2)
+
+        # Update the file path after saving
+        self._file_path = file_path
 
     @classmethod
     def open_project_dialog(cls):
@@ -450,6 +458,7 @@ class VideoProject:
             instance.total_frames,
             project_data.get("segment_list", []),
         )
+        instance._file_path = file_path
         return instance
 
     def load_video(self):
@@ -754,6 +763,7 @@ class VideoSplitterApp(ctk.CTk):
 
         # Bind keyboard shortcuts
         self.bind("<Control-s>", self.save_project)
+        self.bind("<Control-Shift-S>", self.save_as_project)
         self.bind("<Control-o>", self.open_project)
         self.bind("<space>", self.toggle_playback)
         self.bind("<Left>", self.goto_prev_frame)
@@ -3139,6 +3149,25 @@ class VideoSplitterApp(ctk.CTk):
 
     def save_project(self, event=None):
         """Save project file"""
+        if not self.vp:
+            messagebox.showwarning(t("Warning"), t("No video loaded"))
+            return
+
+        if not self.vp.file_path or not os.path.exists(self.vp.file_path):
+            self.save_as_project()
+            return
+
+        try:
+            self.vp.save(self.vp.file_path)
+
+            messagebox.showinfo(t("Done"), t("Project file saved"))
+        except Exception as e:
+            messagebox.showerror(
+                t("Error"), f"{t("Project save failed")}: {str(e)}"
+            )
+
+    def save_as_project(self, event=None):
+        """Save project file as"""
         if not self.vp:
             messagebox.showwarning(t("Warning"), t("No video loaded"))
             return
