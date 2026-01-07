@@ -768,6 +768,13 @@ class VideoSplitterApp(ctk.CTk):
         self.bind("<space>", self.toggle_playback)
         self.bind("<Left>", self.goto_prev_frame)
         self.bind("<Right>", self.goto_next_frame)
+        self.bind("<Control-Left>", self.goto_prev_section)
+        self.bind("<Control-Right>", self.goto_next_section)
+        self.bind("<Up>", self.switch_to_upper_layer)
+        self.bind("<Down>", self.switch_to_lower_layer)
+        self.bind("<s>", self.set_start_point)
+        self.bind("<e>", self.set_end_point)
+        self.bind("<a>", self.toggle_mode)
 
     def _load_available_codecs(self):
         self.available_codecs = video_utils.get_available_codecs()
@@ -1250,7 +1257,7 @@ class VideoSplitterApp(ctk.CTk):
             text=mode_display_value, fg_color=fg_color, hover_color=hover_color
         )
 
-    def toggle_mode(self):
+    def toggle_mode(self, event=None):
         """Toggle between Add/Edit mode
         Returns: None
         """
@@ -1269,6 +1276,12 @@ class VideoSplitterApp(ctk.CTk):
             mode = self.get_current_mode()
 
         if mode == "Edit":
+            if self.vp is None:
+                messagebox.showwarning(
+                    t("Warning"), t("No video loaded to edit segments.")
+                )
+                return
+
             if self.selected_segment_id is not None:
                 segment = self.vp.segments.get_segment_by_id(
                     self.selected_segment_id
@@ -1803,7 +1816,7 @@ class VideoSplitterApp(ctk.CTk):
         if self.current_frame >= self.vp.total_frames - 1:
             self.pause_video()
 
-    def goto_next_section(self):
+    def goto_next_section(self, event=None):
         if self.vp is None:
             return
 
@@ -1845,7 +1858,7 @@ class VideoSplitterApp(ctk.CTk):
                 else next_segment.end_frame
             )
 
-    def goto_prev_section(self):
+    def goto_prev_section(self, event=None):
         if self.vp is None:
             return
 
@@ -2187,6 +2200,14 @@ class VideoSplitterApp(ctk.CTk):
                 )
             )
 
+    def switch_to_upper_layer(self, event=None):
+        if self.selected_layer > self.layers[0]:
+            self.change_layer(str(self.selected_layer - 1))
+
+    def switch_to_lower_layer(self, event=None):
+        if self.selected_layer < self.layers[-1]:
+            self.change_layer(str(self.selected_layer + 1))
+
     def select_segment_id_with_jump(self, id):
         position = "start" if self.selected_segment_id != id else None
 
@@ -2399,7 +2420,7 @@ class VideoSplitterApp(ctk.CTk):
             ),
         )
 
-    def set_start_point(self):
+    def set_start_point(self, event=None):
         if self.get_current_mode() == "Add":
             self.set_new_start_point()
         else:
@@ -2407,6 +2428,9 @@ class VideoSplitterApp(ctk.CTk):
 
     def set_new_start_point(self):
         """Set the start point at the next free time from current position"""
+        if self.vp is None:
+            return
+
         if self.start_frame is not None:
             self.reset_start_point()
             self.status_text.info(t("Start point reset"))
@@ -2443,6 +2467,9 @@ class VideoSplitterApp(ctk.CTk):
 
     def edit_start_point(self, id=None):
         """Edit the start point to a specific time"""
+        if self.vp is None:
+            return
+
         if id is None:
             id = self.selected_segment_id
 
@@ -2507,7 +2534,7 @@ class VideoSplitterApp(ctk.CTk):
                 )
             )
 
-    def set_end_point(self):
+    def set_end_point(self, event=None):
         if self.get_current_mode() == "Add":
             self.set_new_end_point()
         else:
@@ -2515,6 +2542,9 @@ class VideoSplitterApp(ctk.CTk):
 
     def set_new_end_point(self):
         """Set the end point at the previous free time from current position"""
+        if self.vp is None:
+            return
+
         if self.start_frame is None:
             messagebox.showwarning(
                 t("Warning"), t("Start point must be set first")
@@ -2577,6 +2607,9 @@ class VideoSplitterApp(ctk.CTk):
 
     def edit_end_point(self, id=None):
         """Edit the end point to a specific time"""
+        if self.vp is None:
+            return
+
         if id is None:
             id = self.selected_segment_id
 

@@ -138,6 +138,7 @@ translations = {
         "Frame seek failed. If problems persist, please reload the video.": "Frame seek failed. If problems persist, please reload the video.",
         "Scale": "Scale",
         "Start point reset": "Start point reset",
+        "No video loaded to edit segments.": "No video loaded to edit segments.",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -272,5 +273,6 @@ translations = {
         "Frame seek failed. If problems persist, please reload the video.": "フレームのシークに失敗しました。問題が解決しない場合は、動画を再読み込みしてください。",
         "Scale": "拡大率",
         "Start point reset": "開始ポイントをリセットしました",
+        "No video loaded to edit segments.": "編集するセグメントの動画が読み込まれていません",
     },
 }
