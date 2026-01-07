@@ -3,7 +3,7 @@ translations = {
     "en": {
         "Select video file": "Select video file",
         "Save Project": "Save Project",
-        "Load Project": "Load Project",
+        "Open Project": "Open Project",
         "Load a video file": "Load a video file",
         "Project saved": "Project saved",
         "Project loaded": "Project loaded",
@@ -141,7 +141,7 @@ translations = {
     "ja": {
         "Select video file": "動画ファイルを選択",
         "Save Project": "プロジェクト保存",
-        "Load Project": "プロジェクト読み込み",
+        "Open Project": "プロジェクト読み込み",
         "Load a video file": "動画ファイルを選択",
         "Project saved": "プロジェクトを保存しました",
         "Project loaded": "プロジェクトを読み込みました",

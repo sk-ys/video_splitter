@@ -418,9 +418,9 @@ class VideoProject:
             json.dump(project_data, f, ensure_ascii=False, indent=2)
 
     @classmethod
-    def load_project_dialog(cls):
+    def open_project_dialog(cls):
         return filedialog.askopenfilename(
-            title=t("Load Project"),
+            title=t("Open Project"),
             filetypes=[
                 ("JSON", "*.json"),
                 (t("Select"), "*.*"),
@@ -430,7 +430,7 @@ class VideoProject:
     @classmethod
     def load(cls, file_path=None):
         if file_path is None:
-            file_path = cls.load_project_dialog()
+            file_path = cls.open_project_dialog()
 
         if not file_path:
             raise ValueError("No project file selected")
@@ -986,16 +986,16 @@ class VideoSplitterApp(ctk.CTk):
         self.file_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
         # Project load button
-        self.load_project_button = ctk.CTkButton(
+        self.open_project_button = ctk.CTkButton(
             parent,
-            text="📂 " + t("Load Project"),
-            command=self.load_project,
+            text="📂 " + t("Open Project"),
+            command=self.open_project,
             height=40,
             width=150,
             fg_color="gray40",
             hover_color="gray50",
         )
-        self.load_project_button.grid(row=0, column=2, padx=5, pady=5)
+        self.open_project_button.grid(row=0, column=2, padx=5, pady=5)
 
         # Project save button
         self.save_project_button = ctk.CTkButton(
@@ -3130,7 +3130,7 @@ class VideoSplitterApp(ctk.CTk):
             self.vp.cap.release()
         self.destroy()
 
-    def save_project(self):
+    def save_project(self, event=None):
         """Save project file"""
         if not self.vp:
             messagebox.showwarning(t("Warning"), t("No video loaded"))
@@ -3152,9 +3152,9 @@ class VideoSplitterApp(ctk.CTk):
                     t("Error"), f"{t("Project save failed")}: {str(e)}"
                 )
 
-    def load_project(self):
-        """Load project file"""
-        file_path = VideoProject.load_project_dialog()
+    def open_project(self, event=None):
+        """Open project file"""
+        file_path = VideoProject.open_project_dialog()
 
         if not file_path:
             return
