@@ -1,4 +1,5 @@
 from datetime import datetime
+import functools
 from pathlib import Path
 import re
 import tkinter as tk
@@ -725,6 +726,17 @@ class SettingsDialog(ctk.CTkToplevel):
             ),
         )
 
+def skip_if_entry_focused(func):
+    """Decorator to skip function execution if an Entry widget has focus"""
+    @functools.wraps(func)
+    def wrapper(self, event=None):
+        focused_widget = self.focus_get()
+        if isinstance(focused_widget, (ctk.CTkEntry, tk.Entry)):
+            # Clear focus from entry widget
+            self.focus_set()
+            return "break"  # Return "break" to prevent further event propagation
+        return func(self, event)
+    return wrapper
 
 class VideoSplitterApp(ctk.CTk):
     def __init__(self):
@@ -1286,6 +1298,7 @@ class VideoSplitterApp(ctk.CTk):
             text=mode_display_value, fg_color=fg_color, hover_color=hover_color
         )
 
+    @skip_if_entry_focused
     def toggle_mode(self, event=None):
         """Toggle between Add/Edit mode
         Returns: None
@@ -1731,6 +1744,7 @@ class VideoSplitterApp(ctk.CTk):
             )
             self.status_text.error(t("Unexpected error") + f": {str(e)}")
 
+    @skip_if_entry_focused
     def toggle_playback(self, event=None):
         if self.is_playing:
             self.pause_video()
@@ -1756,6 +1770,7 @@ class VideoSplitterApp(ctk.CTk):
                 hover_color="#144870",
             )
 
+    @skip_if_entry_focused
     def goto_prev_frame(self, event=None):
         """Go back 1 frame"""
         self.pause_video()
@@ -1810,7 +1825,8 @@ class VideoSplitterApp(ctk.CTk):
 
     def on_next_frame_button_release(self, event):
         self.next_frame_auto_repeat = False
-
+    
+    @skip_if_entry_focused
     def goto_next_frame(self, event=None):
         """Advance 1 frame"""
         self.pause_video()
@@ -1845,6 +1861,7 @@ class VideoSplitterApp(ctk.CTk):
         if self.current_frame >= self.vp.total_frames - 1:
             self.pause_video()
 
+    @skip_if_entry_focused
     def goto_next_section(self, event=None):
         if self.vp is None:
             return
@@ -1887,6 +1904,7 @@ class VideoSplitterApp(ctk.CTk):
                 else next_segment.end_frame
             )
 
+    @skip_if_entry_focused
     def goto_prev_section(self, event=None):
         if self.vp is None:
             return
@@ -2229,10 +2247,12 @@ class VideoSplitterApp(ctk.CTk):
                 )
             )
 
+    @skip_if_entry_focused
     def switch_to_upper_layer(self, event=None):
         if self.selected_layer > self.layers[0]:
             self.change_layer(str(self.selected_layer - 1))
 
+    @skip_if_entry_focused
     def switch_to_lower_layer(self, event=None):
         if self.selected_layer < self.layers[-1]:
             self.change_layer(str(self.selected_layer + 1))
@@ -2449,6 +2469,7 @@ class VideoSplitterApp(ctk.CTk):
             ),
         )
 
+    @skip_if_entry_focused
     def set_start_point(self, event=None):
         if self.get_current_mode() == "Add":
             self.set_new_start_point()
@@ -2563,6 +2584,7 @@ class VideoSplitterApp(ctk.CTk):
                 )
             )
 
+    @skip_if_entry_focused
     def set_end_point(self, event=None):
         if self.get_current_mode() == "Add":
             self.set_new_end_point()
@@ -3237,6 +3259,7 @@ class VideoSplitterApp(ctk.CTk):
             self.vp.cap.release()
         self.destroy()
 
+    @skip_if_entry_focused
     def save_project(self, event=None):
         """Save project file"""
         if not self.vp:
@@ -3256,6 +3279,7 @@ class VideoSplitterApp(ctk.CTk):
                 t("Error"), f"{t("Project save failed")}: {str(e)}"
             )
 
+    @skip_if_entry_focused
     def save_as_project(self, event=None):
         """Save project file as"""
         if not self.vp:
@@ -3278,6 +3302,7 @@ class VideoSplitterApp(ctk.CTk):
                     t("Error"), f"{t("Project save failed")}: {str(e)}"
                 )
 
+    @skip_if_entry_focused
     def open_project(self, event=None):
         """Open project file"""
         file_path = VideoProject.open_project_dialog()
