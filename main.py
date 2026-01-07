@@ -1859,8 +1859,9 @@ class VideoSplitterApp(ctk.CTk):
         self.current_frame = max(0, min(frame_num, self.vp.total_frames - 1))
         self.update_zoom_range()
         self.update_frame()
-        self.update_seekbar_time_labels()
         self.update_time_label()
+        self.update_seekbar_slider_value()
+        self.update_seekbar_time_labels()
         self.draw_all_segment_ranges()
 
     def jump_to_time(self, time_sec):
