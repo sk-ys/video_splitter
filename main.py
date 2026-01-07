@@ -752,6 +752,13 @@ class VideoSplitterApp(ctk.CTk):
 
         self.change_layer(self.selected_layer)
 
+        # Bind keyboard shortcuts
+        self.bind("<Control-s>", self.save_project)
+        self.bind("<Control-o>", self.open_project)
+        self.bind("<space>", self.toggle_playback)
+        self.bind("<Left>", self.goto_prev_frame)
+        self.bind("<Right>", self.goto_next_frame)
+
     def _load_available_codecs(self):
         self.available_codecs = video_utils.get_available_codecs()
 
@@ -1014,7 +1021,7 @@ class VideoSplitterApp(ctk.CTk):
         self.play_button = ctk.CTkButton(
             parent,
             text="▶ " + t("Play"),
-            command=self.toggle_play,
+            command=self.toggle_playback,
             width=100,
             state="disabled",
         )
@@ -1649,7 +1656,7 @@ class VideoSplitterApp(ctk.CTk):
             self.video_label.configure(image=ctk_img, text="")
             self.video_label.image = ctk_img
 
-    def toggle_play(self):
+    def toggle_playback(self, event=None):
         if self.is_playing:
             self.pause_video()
         else:
@@ -1674,7 +1681,7 @@ class VideoSplitterApp(ctk.CTk):
                 hover_color="#144870",
             )
 
-    def prev_frame(self):
+    def goto_prev_frame(self, event=None):
         """Go back 1 frame"""
         self.pause_video()
 
@@ -1699,7 +1706,7 @@ class VideoSplitterApp(ctk.CTk):
                 self.prev_frame_auto_repeat
                 and prev_frame_click == self.prev_frame_click_count
             ):
-                self.prev_frame()
+                self.goto_prev_frame()
                 self.after(self.auto_repeat_interval_ms, repeat)
 
         repeat()
@@ -1721,7 +1728,7 @@ class VideoSplitterApp(ctk.CTk):
                 self.next_frame_auto_repeat
                 and next_frame_click == self.next_frame_click_count
             ):
-                self.next_frame()
+                self.goto_next_frame()
                 self.after(self.auto_repeat_interval_ms, repeat)
 
         repeat()
@@ -1729,7 +1736,7 @@ class VideoSplitterApp(ctk.CTk):
     def on_next_frame_button_release(self, event):
         self.next_frame_auto_repeat = False
 
-    def next_frame(self):
+    def goto_next_frame(self, event=None):
         """Advance 1 frame"""
         self.pause_video()
 
