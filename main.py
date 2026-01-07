@@ -2617,14 +2617,10 @@ class VideoSplitterApp(ctk.CTk):
             layers = [self.selected_layer]
             self.layer_label.configure(text_color="white")
 
-        segment_list = sorted(
-            [
-                segment
-                for segment in self.vp.segments
-                if segment.layer in layers
-            ],
-            key=lambda x: x.segment_id,
-        )
+        segment_list = [
+            segment for segment in self.vp.segments if segment.layer in layers
+        ]
+
         for segment in segment_list:
             self.append_segment_to_segment_list(segment)
 
