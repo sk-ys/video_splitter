@@ -78,7 +78,7 @@ class Segment:
 
     @property
     def duration(self):
-        return self.end_frame - self.start_frame
+        return (self.end_frame - self.start_frame) / self.fps
 
     @property
     def start_time(self):
