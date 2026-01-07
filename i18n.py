@@ -139,6 +139,8 @@ translations = {
         "Scale": "Scale",
         "Start point reset": "Start point reset",
         "No video loaded to edit segments.": "No video loaded to edit segments.",
+        "Clear cache": "Clear cache",
+        "Video cache cleared.": "Video cache cleared.",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -274,5 +276,7 @@ translations = {
         "Scale": "拡大率",
         "Start point reset": "開始ポイントをリセットしました",
         "No video loaded to edit segments.": "編集するセグメントの動画が読み込まれていません",
+        "Clear cache": "キャッシュをクリア",
+        "Video cache cleared.": "ビデオキャッシュをクリアしました",
     },
 }

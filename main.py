@@ -537,10 +537,12 @@ class SettingsDialog(ctk.CTkToplevel):
             row=0, column=0, padx=10, pady=5, sticky="nsew"
         )
         self.content_frame.grid_columnconfigure(0, weight=1)
+        
+        row = 0
 
         # Language selection
         ctk.CTkLabel(self.content_frame, text=t("Language") + ":").grid(
-            row=0, column=0, padx=5, pady=5, sticky="w"
+            row=row, column=0, padx=5, pady=5, sticky="w"
         )
 
         self.lang_var = ctk.StringVar(value=lang)
@@ -550,14 +552,15 @@ class SettingsDialog(ctk.CTkToplevel):
             variable=self.lang_var,
             command=self.change_language,
         )
-        self.lang_option.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.lang_option.grid(row=row, column=1, padx=5, pady=5, sticky="w")
 
         # Layer count selection
+        row += 1
         self.layer_count_label = ctk.CTkLabel(
             self.content_frame, text=t("Number of default Layers") + ":"
         )
         self.layer_count_label.grid(
-            row=1, column=0, padx=5, pady=5, sticky="w"
+            row=row, column=0, padx=5, pady=5, sticky="w"
         )
 
         self.layer_count_var = ctk.IntVar(
@@ -569,14 +572,15 @@ class SettingsDialog(ctk.CTkToplevel):
             variable=self.layer_count_var,
         )
         self.layer_count_spinbox.grid(
-            row=1, column=1, padx=5, pady=5, sticky="w"
+            row=row, column=1, padx=5, pady=5, sticky="w"
         )
 
         # Cache size selection
+        row += 1
         self.cache_size_label = ctk.CTkLabel(
             self.content_frame, text=t("Video Cache Size (frames)") + ":"
         )
-        self.cache_size_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.cache_size_label.grid(row=row, column=0, padx=5, pady=5, sticky="w")
         self.cache_size_spinbox = CTkSpinbox(
             self.content_frame,
             initialvalue=config.getint("DEFAULT", "cache_size", fallback=30),
@@ -586,15 +590,34 @@ class SettingsDialog(ctk.CTkToplevel):
             width=120,
         )
         self.cache_size_spinbox.grid(
-            row=2, column=1, padx=5, pady=5, sticky="w"
+            row=row, column=1, padx=5, pady=5, sticky="w"
+        )
+        
+        # Clear cache button
+        row += 1
+        self.clear_cache_label = ctk.CTkLabel(
+            self.content_frame,
+            text=t("Clear cache") + ":",
+        )
+        self.clear_cache_label.grid(
+            row=row, column=0, padx=5, pady=5, sticky="w"
+        )
+        self.clear_cache_button = ctk.CTkButton(
+            self.content_frame,
+            text=t("Clear"),
+            command=self.parent.clear_video_cache,
+        )
+        self.clear_cache_button.grid(
+            row=row, column=1, padx=5, pady=5, sticky="w"
         )
 
         # Preload head frame count selection
+        row += 1
         self.preload_head_frame_count_label = ctk.CTkLabel(
             self.content_frame, text=t("Preload Head Frame Count") + ":"
         )
         self.preload_head_frame_count_label.grid(
-            row=3, column=0, padx=5, pady=5, sticky="w"
+            row=row, column=0, padx=5, pady=5, sticky="w"
         )
         self.preload_head_frame_count_spinbox = CTkSpinbox(
             self.content_frame,
@@ -607,13 +630,14 @@ class SettingsDialog(ctk.CTkToplevel):
             width=120,
         )
         self.preload_head_frame_count_spinbox.grid(
-            row=3, column=1, padx=5, pady=5, sticky="w"
+            row=row, column=1, padx=5, pady=5, sticky="w"
         )
 
         # Codec selector
+        row += 1
         ctk.CTkLabel(
             self.content_frame, text=t("Video encoder codec") + ":"
-        ).grid(row=4, column=0, padx=5, pady=5, sticky="w")
+        ).grid(row=row, column=0, padx=5, pady=5, sticky="w")
         self.codec_var = ctk.StringVar(
             value=config.get("DEFAULT", "codec", fallback="mp4v")
         )
@@ -622,12 +646,13 @@ class SettingsDialog(ctk.CTkToplevel):
             values=[codec for codec, _ in self.parent.available_codecs],
             variable=self.codec_var,
         )
-        self.codec_option.grid(row=4, column=1, padx=5, pady=5, sticky="w")
+        self.codec_option.grid(row=row, column=1, padx=5, pady=5, sticky="w")
 
         # Backend selector
+        row += 1
         ctk.CTkLabel(
             self.content_frame, text=t("Video backend (if available)") + ":"
-        ).grid(row=5, column=0, padx=5, pady=5, sticky="w")
+        ).grid(row=row, column=0, padx=5, pady=5, sticky="w")
         self.backend_var = ctk.StringVar(
             value=config.get("DEFAULT", "backend", fallback="opencv")
         )
@@ -636,7 +661,7 @@ class SettingsDialog(ctk.CTkToplevel):
             values=["opencv", "ffmpeg"],
             variable=self.backend_var,
         )
-        self.backend_option.grid(row=5, column=1, padx=5, pady=5, sticky="w")
+        self.backend_option.grid(row=row, column=1, padx=5, pady=5, sticky="w")
 
         # Buttons
         self.button_frame = ctk.CTkFrame(self)
@@ -791,6 +816,10 @@ class VideoSplitterApp(ctk.CTk):
 
     def set_cache_size(self, size):
         self.video_cache.max_size = size
+        
+    def clear_video_cache(self):
+        self.video_cache.clear()
+        self.status_text.info(t("Video cache cleared."))
 
     def set_preload_head_frame_count(self, count):
         self.video_cache_for_head_frame_count = count
