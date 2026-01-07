@@ -137,6 +137,7 @@ translations = {
         "Reset IDs": "Reset IDs",
         "Frame seek failed. If problems persist, please reload the video.": "Frame seek failed. If problems persist, please reload the video.",
         "Scale": "Scale",
+        "Start point reset": "Start point reset",
     },
     "ja": {
         "Select video file": "動画ファイルを選択",
@@ -270,5 +271,6 @@ translations = {
         "Reset IDs": "IDをリセット",
         "Frame seek failed. If problems persist, please reload the video.": "フレームのシークに失敗しました。問題が解決しない場合は、動画を再読み込みしてください。",
         "Scale": "拡大率",
+        "Start point reset": "開始ポイントをリセットしました",
     },
 }

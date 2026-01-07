@@ -2407,6 +2407,11 @@ class VideoSplitterApp(ctk.CTk):
 
     def set_new_start_point(self):
         """Set the start point at the next free time from current position"""
+        if self.start_frame is not None:
+            self.reset_start_point()
+            self.status_text.info(t("Start point reset"))
+            return
+
         free_time = self.vp.segments.get_next_free_time(
             self.current_frame / self.vp.fps, self.selected_layer
         )
