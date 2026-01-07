@@ -1646,7 +1646,20 @@ class VideoSplitterApp(ctk.CTk):
                 else:
                     self.video_cache.set(self.current_frame, frame.copy())
 
-        if frame is not None:
+        if frame is None:
+            print(f"[Error] Failed to read frame {self.current_frame}")
+            self.status_text.error(
+                t("Error reading frame") + f": {self.current_frame}"
+            )
+            return
+
+        # Check if frame is valid (not empty and has correct shape)
+        if frame.size == 0:
+            print(f"[Error] Frame {self.current_frame} is empty")
+            return
+
+        try:
+
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             # Resize
@@ -1665,6 +1678,16 @@ class VideoSplitterApp(ctk.CTk):
 
             self.video_label.configure(image=ctk_img, text="")
             self.video_label.image = ctk_img
+        except cv2.error as e:
+            print(f"[Error] OpenCV error at frame {self.current_frame}: {e}")
+            self.status_text.error(
+                t("Error reading frame") + f": {self.current_frame}"
+            )
+        except Exception as e:
+            print(
+                f"[Error] Unexpected error at frame {self.current_frame}: {e}"
+            )
+            self.status_text.error(t("Unexpected error") + f": {str(e)}")
 
     def toggle_playback(self, event=None):
         if self.is_playing:
