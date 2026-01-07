@@ -1706,8 +1706,8 @@ class VideoSplitterApp(ctk.CTk):
 
             # Resize
             h, w = frame.shape[:2]
-            max_width = 800
-            max_height = 450
+            max_width = 1000
+            max_height = 600
             scale = min(max_width / w, max_height / h)
             new_w, new_h = round(w * scale), round(h * scale)
 
